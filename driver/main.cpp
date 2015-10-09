@@ -25,6 +25,10 @@ void PrintToken(token *Token) {
     printf("%s\n", Token->Id.c_str());
     break;
 
+  case token::END:
+    printf("EOF\n");
+    break;
+
   default:
     printf("%c\n", Token->Type);
     break;
