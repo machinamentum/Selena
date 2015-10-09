@@ -1,13 +1,31 @@
 
 #include "parser.h"
 
+void ParserCreateStatmentBranches(parse_node *Node, int StatementEnd) {
+  parse_node StatementNode;
+  StatementNode.Type = parse_node::E;
+  std::vector<parse_node> ChildrenClone = std::vector<parse_node>(Node->Children);
+  Node->Children.clear();
+  for (int i = 0; i < ChildrenClone.size(); ++i) {
+    StatementNode.Children.push_back(ChildrenClone[i]);
+    if (ChildrenClone[i].Token.Type == StatementEnd) {
+      Node->Children.push_back(StatementNode);
+      StatementNode = parse_node();
+    }
+  }
+  if (StatementNode.Children.size())
+    Node->Children.push_back(StatementNode);
+}
+
 parse_node ParserGetParens(lexer_state *State) {
   parse_node Node = ParserGetNode(State, ')');
+  ParserCreateStatmentBranches(&Node, ',');
   return Node;
 }
 
 parse_node ParserGetCurls(lexer_state *State) {
   parse_node Node = ParserGetNode(State, '}');
+  ParserCreateStatmentBranches(&Node, ';');
   return Node;
 }
 
