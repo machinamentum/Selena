@@ -18,6 +18,4 @@ parse_node ParserGetNode(lexer_state *State, int StatementEnd);
 parse_node ParserGetCurls(lexer_state *State);
 parse_node ParserGetParens(lexer_state *State);
 
-
-
 #endif

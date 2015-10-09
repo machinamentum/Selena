@@ -8,13 +8,12 @@ void LexerInit(lexer_state *State, char *Source, char *End) {
   State->OffsetCurrent = 0;
 }
 
-
 token LexerGetToken(lexer_state *State) {
   token ReturnToken;
 
   auto IsWhiteSpace = [](char C) {
     return (C == ' ') || (C == '\n') || (C == '\t') || (C == '\r') ||
-    (C == '\f');
+           (C == '\f');
   };
 
   char *Current = State->CurrentPtr;
@@ -37,7 +36,7 @@ token LexerGetToken(lexer_state *State) {
   if (IsAsciiLetter(Current[0])) {
     auto IsAsciiLetterOrNumber = [](char C) {
       return ((C >= '0') && (C <= '9')) || ((C >= 'A') && (C <= 'Z')) ||
-      ((C >= 'a') && (C <= 'z'));
+             ((C >= 'a') && (C <= 'z'));
     };
     char *End = Current + 1;
     while (IsAsciiLetterOrNumber(*End) && (End < State->EndPtr)) {
@@ -53,7 +52,7 @@ token LexerGetToken(lexer_state *State) {
   }
 
   static auto IsNumberOrDot =
-  [](char C) { return ((C >= '0') && (C <= '9')) || (C == '.'); };
+      [](char C) { return ((C >= '0') && (C <= '9')) || (C == '.'); };
 
   if (IsNumberOrDot(Current[0])) {
     char *End;
@@ -67,25 +66,25 @@ token LexerGetToken(lexer_state *State) {
   }
 
   switch (Current[0]) {
-    case '<': {
-      if (Current < State->EndPtr) {
-        if (Current[1] == '<') {
-          ReturnToken.Type = token::SHIFTLEFT;
-          ++State->OffsetCurrent;
-        } else if (Current[1] == '=') {
-          ReturnToken.Type = token::LESSEQ;
-          ++State->OffsetCurrent;
-        }
+  case '<': {
+    if (Current < State->EndPtr) {
+      if (Current[1] == '<') {
+        ReturnToken.Type = token::SHIFTLEFT;
+        ++State->OffsetCurrent;
+      } else if (Current[1] == '=') {
+        ReturnToken.Type = token::LESSEQ;
+        ++State->OffsetCurrent;
       }
-      goto _BuildToken;
     }
+    goto _BuildToken;
+  }
 
-    default:
-    _BuildToken:
-      ReturnToken.Line = State->LineCurrent;
-      ReturnToken.Offset = State->OffsetCurrent;
-      ++State->OffsetCurrent;
-      ReturnToken.Type = Current[0];
+  default:
+  _BuildToken:
+    ReturnToken.Line = State->LineCurrent;
+    ReturnToken.Offset = State->OffsetCurrent;
+    ++State->OffsetCurrent;
+    ReturnToken.Type = Current[0];
   }
 
   ++Current;

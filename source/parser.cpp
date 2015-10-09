@@ -4,7 +4,8 @@
 void ParserCreateStatmentBranches(parse_node *Node, int StatementEnd) {
   parse_node StatementNode;
   StatementNode.Type = parse_node::E;
-  std::vector<parse_node> ChildrenClone = std::vector<parse_node>(Node->Children);
+  std::vector<parse_node> ChildrenClone =
+      std::vector<parse_node>(Node->Children);
   Node->Children.clear();
   for (int i = 0; i < ChildrenClone.size(); ++i) {
     StatementNode.Children.push_back(ChildrenClone[i]);
@@ -42,13 +43,12 @@ parse_node ParserGetNode(lexer_state *State, int StatementEnd) {
     if (Token.Type == '(') {
       NodeParent.Children.push_back(ParserGetParens(State));
       Child.Type = parse_node::T;
-      Child.Token = { ')' };
+      Child.Token = {')'};
       NodeParent.Children.push_back(Child);
-    }
-    else if (Token.Type == '{') {
+    } else if (Token.Type == '{') {
       NodeParent.Children.push_back(ParserGetCurls(State));
       Child.Type = parse_node::T;
-      Child.Token = { '}' };
+      Child.Token = {'}'};
       NodeParent.Children.push_back(Child);
     }
 

@@ -17,17 +17,17 @@ char *SlurpFile(const char *FilePath, long *FileSize) {
 
 void PrintToken(token *Token) {
   switch (Token->Type) {
-    case token::FLOAT:
-      printf("%f\n", Token->FloatValue);
-      break;
+  case token::FLOAT:
+    printf("%f\n", Token->FloatValue);
+    break;
 
-    case token::IDENTIFIER:
-      printf("%s\n", Token->Id.c_str());
-      break;
+  case token::IDENTIFIER:
+    printf("%s\n", Token->Id.c_str());
+    break;
 
-    default:
-      printf("%c\n", Token->Type);
-      break;
+  default:
+    printf("%c\n", Token->Type);
+    break;
   }
 }
 
@@ -40,8 +40,7 @@ void PrintParseTree(parse_node *Node, int Depth) {
     for (int i = 0; i < Node->Children.size(); ++i) {
       PrintParseTree(&Node->Children[i], Depth + 1);
     }
-  }
-  else {
+  } else {
     printf("T%d: ", Depth);
     PrintToken(&Node->Token);
   }
