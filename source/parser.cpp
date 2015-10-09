@@ -22,14 +22,22 @@ void ParserCreateStatmentBranches(parse_node *Node, int StatementEnd) {
 
 parse_node ParserGetParens(lexer_state *State) {
   parse_node Node = ParserGetNode(State, ')');
-  ParserCreateStatmentBranches(&Node, ',');
   return Node;
 }
 
 parse_node ParserGetCurls(lexer_state *State) {
   parse_node Node = ParserGetNode(State, '}');
-  ParserCreateStatmentBranches(&Node, ';');
   return Node;
+}
+
+parse_node ParserExtractLastTokenFromChildren(parse_node *Parent) {
+  parse_node ReturnNode;
+  ReturnNode.Type = parse_node::E;
+  if (Parent->Children.size()) {
+    ReturnNode = Parent->Children[Parent->Children.size() - 1];
+    Parent->Children.pop_back();
+  }
+  return ReturnNode;
 }
 
 parse_node ParserGetNode(lexer_state *State, int StatementEnd) {
@@ -43,13 +51,22 @@ parse_node ParserGetNode(lexer_state *State, int StatementEnd) {
     Child.Token = Token;
     NodeParent.Children.push_back(Child);
     if (Token.Type == '(') {
-      NodeParent.Children.push_back(ParserGetParens(State));
+      parse_node Node = ParserGetParens(State);
+      Child = ParserExtractLastTokenFromChildren(&Node);
+      ParserCreateStatmentBranches(&Node, ',');
+      NodeParent.Children.push_back(Node);
+      NodeParent.Children.push_back(Child);
     } else if (Token.Type == '{') {
-      NodeParent.Children.push_back(ParserGetCurls(State));
+      parse_node Node = ParserGetCurls(State);
+      Child = ParserExtractLastTokenFromChildren(&Node);
+      ParserCreateStatmentBranches(&Node, ';');
+      NodeParent.Children.push_back(Node);
+      NodeParent.Children.push_back(Child);
     }
 
     Token = LexerGetToken(State);
   }
+
   parse_node Child;
   Child.Type = parse_node::T;
   Child.Token = Token;
