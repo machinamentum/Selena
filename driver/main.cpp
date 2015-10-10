@@ -1,5 +1,6 @@
 #include <fstream>
 #include "parser.h"
+#include "ast.h"
 
 char *SlurpFile(const char *FilePath, long *FileSize) {
   std::ifstream is = std::ifstream(FilePath);
@@ -50,6 +51,29 @@ void PrintParseTree(parse_node *Node, int Depth) {
   }
 }
 
+void PrintAST(ast_node *AST, int Depth) {
+
+  for (ast_node Child : AST->Children) {
+    for (int i = 0; i < Depth; ++i) {
+      printf("  ");
+    }
+    switch (Child.Type) {
+    case ast_node::STRUCT:
+      printf("struct:%s:%d\n", Child.Id.c_str(), Child.Children.size());
+      PrintAST(&Child, Depth + 1);
+      break;
+
+    case ast_node::FLOAT:
+      printf("float:%s\n", Child.Id.c_str());
+      break;
+
+    case ast_node::INT:
+      printf("int:%s\n", Child.Id.c_str());
+      break;
+    }
+  }
+}
+
 int main(int argc, char **argv) {
   lexer_state Lexer;
   long Size;
@@ -57,5 +81,7 @@ int main(int argc, char **argv) {
   LexerInit(&Lexer, Source, Source + Size);
   parse_node RootNode = ParserGetNode(&Lexer, token::END);
   PrintParseTree(&RootNode, 0);
+  ast_node ASTRoot = ASTBuildFromParseTree(&RootNode);
+  PrintAST(&ASTRoot, 0);
   return 0;
 }
