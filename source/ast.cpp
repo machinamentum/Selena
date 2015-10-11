@@ -18,7 +18,6 @@ ast_node ASTBuildFunction(parse_node *Node) {
   ASTNode.Type = ast_node::FUNCTION;
   ASTNode.VarType = ASTGetTypeFromString(Node->Children[0].Token.Id);
   ASTNode.Id = Node->Children[1].Token.Id;
-  //  ASTNode.Children.push_back() // do statements
   return ASTNode;
 }
 
@@ -52,10 +51,8 @@ ast_node ASTBuildFromIdentifier(parse_node *Node, parse_node *PNode) {
   token *Token = &Node->Token;
   std::string Id = Token->Id;
   int Type = ASTGetTypeFromString(Id);
-  //  printf("ID:%s\n", Id.c_str());
   if (Type != ast_node::NONE) {
     if (PNode->Children[2].Token.Type == '(') {
-      //      printf("Function");
       return ASTBuildFunction(PNode);
     } else if (Type == ast_node::STRUCT) {
       return ASTBuildStruct(PNode);
