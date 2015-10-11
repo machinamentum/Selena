@@ -21,7 +21,7 @@ TOPDIR ?= $(CURDIR)
 #     - icon.png
 #     - <libctru folder>/default_icon.png
 #---------------------------------------------------------------------------------
-TARGET		:=	ccc
+TARGET		:=	caelinacc
 BUILD		:=	build_tools
 SOURCES		:=	source driver
 DATA		:=
@@ -120,7 +120,7 @@ $(BUILD):
 #---------------------------------------------------------------------------------
 clean:
 	@echo clean ...
-	@rm -fr $(BUILD) ccc
+	@rm -fr $(BUILD) $(TARGET)
 
 
 
