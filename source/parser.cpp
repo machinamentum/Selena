@@ -57,6 +57,12 @@ void ParserCreateScopeBranches(parse_node *Node) {
       }
     } else {
       Child.Children.push_back(ChildrenClone[i]);
+      if (ChildrenClone[i].Token.Type == '(') {
+        NewList = true;
+      }
+      if (ChildrenClone[i].Token.Type == ')') {
+        NewList = false;
+      }
       if (ChildrenClone[i].Token.Type == '{') {
         NewList = true;
       } else if (ChildrenClone[i].Token.Type == '}') {
@@ -65,6 +71,7 @@ void ParserCreateScopeBranches(parse_node *Node) {
         }
         Node->Children.push_back(Child);
         Child = parse_node();
+        NewList = false;
       }
     }
   }
