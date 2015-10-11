@@ -26,6 +26,7 @@ struct ast_node {
   };
 
   int Type;
+  int VarType;
   std::string Id;
   std::vector<ast_node> TypeTable;
   std::vector<ast_node> Children;

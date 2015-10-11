@@ -58,17 +58,25 @@ void PrintAST(ast_node *AST, int Depth) {
       printf("  ");
     }
     switch (Child.Type) {
+    case ast_node::FUNCTION:
+      printf("function:%s:%d\n", Child.Id.c_str(), Child.Children.size());
+      PrintAST(&Child, Depth + 1);
+      break;
     case ast_node::STRUCT:
       printf("struct:%s:%d\n", Child.Id.c_str(), Child.Children.size());
       PrintAST(&Child, Depth + 1);
       break;
 
-    case ast_node::FLOAT:
-      printf("float:%s\n", Child.Id.c_str());
-      break;
+    case ast_node::VARIABLE:
+      switch (Child.VarType) {
+      case ast_node::FLOAT:
+        printf("float:%s\n", Child.Id.c_str());
+        break;
 
-    case ast_node::INT:
-      printf("int:%s\n", Child.Id.c_str());
+      case ast_node::INT:
+        printf("int:%s\n", Child.Id.c_str());
+        break;
+      }
       break;
     }
   }

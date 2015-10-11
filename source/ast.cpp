@@ -1,21 +1,34 @@
 
 #include "ast.h"
 
-ast_node ASTBuildFloat(parse_node *Node) {
-  ast_node ASTNode;
-  ASTNode.Type = ast_node::FLOAT;
-  ASTNode.Id = Node->Children[1].Token.Id;
-  return ASTNode;
+int ASTGetTypeFromString(std::string Typename) {
+  if (Typename.compare("struct") == 0)
+    return ast_node::STRUCT;
+  if (Typename.compare("float") == 0)
+    return ast_node::FLOAT;
+  if (Typename.compare("int") == 0)
+    return ast_node::INT;
+  if (Typename.compare("void") == 0)
+    return ast_node::VOID;
+  return ast_node::NONE;
 }
-ast_node ASTBuildInt(parse_node *Node) {
+
+ast_node ASTBuildFunction(parse_node *Node) {
   ast_node ASTNode;
-  ASTNode.Type = ast_node::INT;
+  ASTNode.Type = ast_node::FUNCTION;
+  ASTNode.VarType = ASTGetTypeFromString(Node->Children[0].Token.Id);
   ASTNode.Id = Node->Children[1].Token.Id;
+  //  ASTNode.Children.push_back() // do statements
   return ASTNode;
 }
 
-ast_node ASTBuildVariable(parse_node *Node) {}
-ast_node ASTBuildFunction(parse_node *Node) {}
+ast_node ASTBuildVariable(parse_node *Node) {
+  ast_node ASTNode;
+  ASTNode.Type = ast_node::VARIABLE;
+  ASTNode.VarType = ASTGetTypeFromString(Node->Children[0].Token.Id);
+  ASTNode.Id = Node->Children[1].Token.Id;
+  return ASTNode;
+}
 
 ast_node ASTBuildStruct(parse_node *Node) {
   ast_node ASTNode;
@@ -38,12 +51,17 @@ ast_node ASTBuildStruct(parse_node *Node) {
 ast_node ASTBuildFromIdentifier(parse_node *Node, parse_node *PNode) {
   token *Token = &Node->Token;
   std::string Id = Token->Id;
-  if (Id.compare("struct") == 0) {
-    return ASTBuildStruct(PNode);
-  } else if (Id.compare("float") == 0) {
-    return ASTBuildFloat(PNode);
-  } else if (Id.compare("int") == 0) {
-    return ASTBuildInt(PNode);
+  int Type = ASTGetTypeFromString(Id);
+  //  printf("ID:%s\n", Id.c_str());
+  if (Type != ast_node::NONE) {
+    if (PNode->Children[2].Token.Type == '(') {
+      //      printf("Function");
+      return ASTBuildFunction(PNode);
+    } else if (Type == ast_node::STRUCT) {
+      return ASTBuildStruct(PNode);
+    } else {
+      return ASTBuildVariable(PNode);
+    }
   }
   return ast_node();
 }

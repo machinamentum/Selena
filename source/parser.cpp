@@ -39,6 +39,36 @@ parse_node ParserExtractLastTokenFromChildren(parse_node *Parent) {
   }
   return ReturnNode;
 }
+void PrintToken(token *Token);
+
+void ParserCreateScopeBranches(parse_node *Node) {
+  parse_node Child;
+  Child.Type = parse_node::E;
+  std::vector<parse_node> ChildrenClone =
+      std::vector<parse_node>(Node->Children);
+  Node->Children.clear();
+  bool NewList = false;
+  for (int i = 0; i < ChildrenClone.size(); ++i) {
+    if (ChildrenClone[i].Type == parse_node::E) {
+      if (!NewList) {
+        Node->Children.push_back(ChildrenClone[i]);
+      } else {
+        Child.Children.push_back(ChildrenClone[i]);
+      }
+    } else {
+      Child.Children.push_back(ChildrenClone[i]);
+      if (ChildrenClone[i].Token.Type == '{') {
+        NewList = true;
+      } else if (ChildrenClone[i].Token.Type == '}') {
+        if (ChildrenClone[i + 1].Token.Type == ';') {
+          Child.Children.push_back(ChildrenClone[++i]);
+        }
+        Node->Children.push_back(Child);
+        Child = parse_node();
+      }
+    }
+  }
+}
 
 parse_node ParserGetNode(lexer_state *State, int StatementEnd) {
   parse_node NodeParent;
@@ -66,6 +96,17 @@ parse_node ParserGetNode(lexer_state *State, int StatementEnd) {
         NodeParent.Children.push_back(Node.Children[i]);
       }
       NodeParent.Children.push_back(Child);
+
+      Token = LexerGetToken(State);
+      if (Token.Type == ';') {
+        Child.Type = parse_node::T;
+        Child.Token = Token;
+        NodeParent.Children.push_back(Child);
+      } else {
+        ParserCreateScopeBranches(&NodeParent);
+        continue;
+      }
+      ParserCreateScopeBranches(&NodeParent);
     }
 
     Token = LexerGetToken(State);
