@@ -18,10 +18,33 @@ ast_node ASTBuildFunction(parse_node *Node) {
   ASTNode.Type = ast_node::FUNCTION;
   ASTNode.VarType = ASTGetTypeFromString(Node->Children[0].Token.Id);
   ASTNode.Id = Node->Children[1].Token.Id;
+  ASTNode.Children.push_back(ASTBuildFromParseTree(&Node->Children[3]));
+  if (Node->Children[5].Token.Type == '{') {
+    ASTNode.Children.push_back(ASTBuildFromParseTree(&Node->Children[6]));
+  }
+  return ASTNode;
+}
+
+ast_node ASTBuildFunctionCall(parse_node *Node) {
+  ast_node ASTNode;
+  ASTNode.Type = ast_node::FUNCTION_CALL;
+  ASTNode.Id = Node->Children[0].Token.Id;
+  ast_node Params = ASTBuildFromParseTree(&Node->Children[2]);
+  for (ast_node &Param : Params.Children) {
+    ASTNode.Children.push_back(Param);
+  }
   return ASTNode;
 }
 
 ast_node ASTBuildVariable(parse_node *Node) {
+  ast_node ASTNode;
+  ASTNode.Type = ast_node::VARIABLE;
+  ASTNode.VarType = ast_node::NONE;
+  ASTNode.Id = Node->Children[0].Token.Id;
+  return ASTNode;
+}
+
+ast_node ASTBuildStatement(parse_node *Node) {
   ast_node ASTNode;
   ASTNode.Type = ast_node::VARIABLE;
   ASTNode.VarType = ASTGetTypeFromString(Node->Children[0].Token.Id);
@@ -56,6 +79,12 @@ ast_node ASTBuildFromIdentifier(parse_node *Node, parse_node *PNode) {
       return ASTBuildFunction(PNode);
     } else if (Type == ast_node::STRUCT) {
       return ASTBuildStruct(PNode);
+    } else {
+      return ASTBuildStatement(PNode);
+    }
+  } else {
+    if (PNode->Children[1].Token.Type == '(') {
+      return ASTBuildFunctionCall(PNode);
     } else {
       return ASTBuildVariable(PNode);
     }

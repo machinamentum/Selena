@@ -11,6 +11,7 @@ struct ast_node {
   enum {
     NONE = 0,
     FUNCTION,
+    FUNCTION_CALL,
     STATEMENT,
     STRUCT,
     PLUS,

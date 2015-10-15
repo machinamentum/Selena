@@ -52,16 +52,21 @@ void PrintParseTree(parse_node *Node, int Depth) {
 }
 
 void PrintAST(ast_node *AST, int Depth) {
-
   for (ast_node Child : AST->Children) {
     for (int i = 0; i < Depth; ++i) {
       printf("  ");
     }
+    printf("D%d ", Depth);
     switch (Child.Type) {
     case ast_node::FUNCTION:
       printf("function:%s:%d\n", Child.Id.c_str(), Child.Children.size());
       PrintAST(&Child, Depth + 1);
       break;
+    case ast_node::FUNCTION_CALL:
+      printf("call:%s:%d\n", Child.Id.c_str(), Child.Children.size());
+      PrintAST(&Child, Depth + 1);
+      break;
+
     case ast_node::STRUCT:
       printf("struct:%s:%d\n", Child.Id.c_str(), Child.Children.size());
       PrintAST(&Child, Depth + 1);
@@ -76,7 +81,16 @@ void PrintAST(ast_node *AST, int Depth) {
       case ast_node::INT:
         printf("int:%s\n", Child.Id.c_str());
         break;
+
+      default:
+        printf("var:%s\n", Child.Id.c_str());
+        break;
       }
+      break;
+
+    default:
+      printf("\n");
+      PrintAST(&Child, Depth + 1);
       break;
     }
   }

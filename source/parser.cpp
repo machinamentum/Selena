@@ -91,17 +91,13 @@ parse_node ParserGetNode(lexer_state *State, int StatementEnd) {
       parse_node Node = ParserGetParens(State);
       Child = ParserExtractLastTokenFromChildren(&Node);
       ParserCreateStatmentBranches(&Node, ',');
-      for (int i = 0; i < Node.Children.size(); ++i) {
-        NodeParent.Children.push_back(Node.Children[i]);
-      }
+      NodeParent.Children.push_back(Node);
       NodeParent.Children.push_back(Child);
     } else if (Token.Type == '{') {
       parse_node Node = ParserGetCurls(State);
       Child = ParserExtractLastTokenFromChildren(&Node);
       ParserCreateStatmentBranches(&Node, ';');
-      for (int i = 0; i < Node.Children.size(); ++i) {
-        NodeParent.Children.push_back(Node.Children[i]);
-      }
+      NodeParent.Children.push_back(Node);
       NodeParent.Children.push_back(Child);
 
       Token = LexerGetToken(State);
