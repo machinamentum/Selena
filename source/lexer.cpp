@@ -30,13 +30,14 @@ token LexerGetToken(lexer_state *State) {
   }
 
   auto IsAsciiLetter = [](char C) {
-    return ((C >= 'A') && (C <= 'Z')) || ((C >= 'a') && (C <= 'z'));
+    return (C == '_') || ((C >= 'A') && (C <= 'Z')) ||
+           ((C >= 'a') && (C <= 'z'));
   };
 
   if (IsAsciiLetter(Current[0])) {
     auto IsAsciiLetterOrNumber = [](char C) {
-      return ((C >= '0') && (C <= '9')) || ((C >= 'A') && (C <= 'Z')) ||
-             ((C >= 'a') && (C <= 'z'));
+      return (C == '_') || ((C >= '0') && (C <= '9')) ||
+             ((C >= 'A') && (C <= 'Z')) || ((C >= 'a') && (C <= 'z'));
     };
     char *End = Current + 1;
     while (IsAsciiLetterOrNumber(*End) && (End < State->EndPtr)) {
@@ -62,6 +63,79 @@ token LexerGetToken(lexer_state *State) {
     ReturnToken.Offset = State->OffsetCurrent;
     State->OffsetCurrent += End - Current;
     Current = End;
+    goto _Exit;
+  }
+
+  static auto GetEsacpedChar = [](char Char) {
+    switch (Char) {
+    case 't':
+      return '\t';
+    case 'n':
+      return '\n';
+    case 'r':
+      return '\r';
+    case 'f':
+      return '\f';
+    case '"':
+      return '\"';
+    case '\'':
+      return '\'';
+    case '\\':
+      return '\\';
+    }
+  };
+  if (Current[0] == '\"') {
+    ReturnToken.Type = token::DQSTRING;
+    char *End = Current + 1;
+    while ((*End != '\"') && (End < State->EndPtr)) {
+      switch (*End) {
+      case '\\':
+        if (End + 1 < State->EndPtr) {
+          ReturnToken.Id += GetEsacpedChar(*(End + 1));
+          End += 2;
+        }
+        break;
+
+      default:
+        ReturnToken.Id += *End;
+        ++End;
+        break;
+      }
+    }
+
+    State->OffsetCurrent += End - Current;
+    Current = End + 1;
+    ReturnToken.Line = State->LineCurrent;
+    ReturnToken.Offset = State->OffsetCurrent;
+    ++State->OffsetCurrent;
+    goto _Exit;
+  }
+
+  if (Current[0] == '\'') {
+    ReturnToken.Type = token::DQSTRING;
+
+    char *End = Current + 1;
+    while ((*End != '\'') && (End < State->EndPtr)) {
+      switch (*End) {
+      case '\\':
+        if (End + 1 < State->EndPtr) {
+          ReturnToken.Id += GetEsacpedChar(*(End + 1));
+          End += 2;
+        }
+        break;
+
+      default:
+        ReturnToken.Id += *End;
+        ++End;
+        break;
+      }
+    }
+
+    State->OffsetCurrent += End - Current;
+    Current = End + 1;
+    ReturnToken.Line = State->LineCurrent;
+    ReturnToken.Offset = State->OffsetCurrent;
+    ++State->OffsetCurrent;
     goto _Exit;
   }
 

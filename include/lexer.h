@@ -11,6 +11,8 @@ struct token {
     BOOL,
     INT,
     FLOAT,
+    DQSTRING,
+    SQSTRING,
     IDENTIFIER,
     EQEQ,
     PLUSPLUS,

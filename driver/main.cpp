@@ -30,6 +30,14 @@ void PrintToken(token *Token) {
     printf("EOF\n");
     break;
 
+  case token::DQSTRING:
+    printf("\"%s\"\n", Token->Id.c_str());
+    break;
+
+  case token::SQSTRING:
+    printf("\"%s\"\n", Token->Id.c_str());
+    break;
+
   default:
     printf("%c\n", Token->Type);
     break;
