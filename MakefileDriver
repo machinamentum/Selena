@@ -25,25 +25,25 @@ TARGET		:=	caelinacc
 BUILD		:=	build_tools
 SOURCES		:=	source driver
 DATA		:=
-INCLUDES	:=	include raw_data
+INCLUDES	:=	include
 
 #---------------------------------------------------------------------------------
 # options for code generation
 #---------------------------------------------------------------------------------
 ARCH	:=
 
-CFLAGS	:=	 -g -Wall -O2 -Wno-unknown-warning-option -Wno-format -Wno-cpp \
-			-fno-omit-frame-pointer -ffast-math \
-			$(ARCH)
+CFLAGS	:=	 -g -Wall -O2 \
+		-fno-omit-frame-pointer -ffast-math \
+		$(ARCH)
 
-CFLAGS	+=	$(INCLUDE) -D_DESKTOP $(shell pkg-config --cflags glfw3)
+CFLAGS	+=	$(INCLUDE)
 
 CXXFLAGS	:= -std=c++11 $(CFLAGS) -fno-rtti -fno-exceptions
 
 ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	= -g $(ARCH)
 
-LIBS	:=  $(shell pkg-config glfw3 --static --libs) -lm
+LIBS	:=  
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
