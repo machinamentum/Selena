@@ -80,6 +80,11 @@ void PrintAST(ast_node *AST, int Depth) {
       PrintAST(&Child, Depth + 1);
       break;
 
+    case ast_node::RETURN:
+      printf("return\n");
+      PrintAST(&Child, Depth + 1);
+      break;
+
     case ast_node::VARIABLE:
       switch (Child.VarType) {
       case ast_node::FLOAT:

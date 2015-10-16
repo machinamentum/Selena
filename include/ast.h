@@ -24,6 +24,7 @@ struct ast_node {
     INT_LITERAL,
     FLOAT_LITERAL,
     VARIABLE,
+    RETURN,
   };
 
   int Type;

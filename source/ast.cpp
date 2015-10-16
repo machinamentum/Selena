@@ -10,6 +10,8 @@ int ASTGetTypeFromString(std::string Typename) {
     return ast_node::INT;
   if (Typename.compare("void") == 0)
     return ast_node::VOID;
+  if (Typename.compare("return") == 0)
+    return ast_node::RETURN;
   return ast_node::NONE;
 }
 
@@ -52,6 +54,13 @@ ast_node ASTBuildStatement(parse_node *Node) {
   return ASTNode;
 }
 
+ast_node ASTBuildReturn(parse_node *Node) {
+  ast_node ASTNode;
+  ASTNode.Type = ast_node::RETURN;
+  ASTNode.Children.push_back(ASTBuildStatement(&Node->Children[1]));
+  return ASTNode;
+}
+
 ast_node ASTBuildStruct(parse_node *Node) {
   ast_node ASTNode;
   ASTNode.Type = ast_node::STRUCT;
@@ -79,6 +88,8 @@ ast_node ASTBuildFromIdentifier(parse_node *Node, parse_node *PNode) {
       return ASTBuildFunction(PNode);
     } else if (Type == ast_node::STRUCT) {
       return ASTBuildStruct(PNode);
+    } else if (Type == ast_node::RETURN) {
+      return ASTBuildReturn(PNode);
     } else {
       return ASTBuildStatement(PNode);
     }
