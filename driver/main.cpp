@@ -1,6 +1,8 @@
 #include <fstream>
+#include <iostream>
 #include "parser.h"
 #include "ast.h"
+#include "codegen_neo.h"
 
 char *SlurpFile(const char *FilePath, long *FileSize) {
   std::ifstream is = std::ifstream(FilePath);
@@ -85,6 +87,11 @@ void PrintAST(ast_node *AST, int Depth) {
       PrintAST(&Child, Depth + 1);
       break;
 
+    case ast_node::ASSIGNMENT:
+      printf("%s =\n", Child.Id.c_str());
+      PrintAST(&Child, Depth + 1);
+      break;
+
     case ast_node::VARIABLE:
       switch (Child.VarType) {
       case ast_node::FLOAT:
@@ -93,6 +100,18 @@ void PrintAST(ast_node *AST, int Depth) {
 
       case ast_node::INT:
         printf("int:%s\n", Child.Id.c_str());
+        break;
+
+      case ast_node::FLOAT_LITERAL:
+        printf("float:%f\n", Child.FloatValue);
+        break;
+
+      case ast_node::INT_LITERAL:
+        printf("int:%d\n", Child.IntValue);
+        break;
+
+      case ast_node::STRING_LITERAL:
+        printf("string:%s\n", Child.Id.c_str());
         break;
 
       default:
@@ -118,5 +137,7 @@ int main(int argc, char **argv) {
   PrintParseTree(&RootNode, 0);
   ast_node ASTRoot = ASTBuildFromParseTree(&RootNode);
   PrintAST(&ASTRoot, 0);
+  neocode_program Program = CGNeoBuildProgramInstance(&ASTRoot);
+  CGNeoGenerateCode(&Program, std::cout);
   return 0;
 }
