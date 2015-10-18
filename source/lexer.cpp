@@ -19,7 +19,7 @@ token LexerGetToken(lexer_state *State) {
   char *Current = State->CurrentPtr;
   if (Current >= State->EndPtr)
     return {token::END};
-
+_CheckWhiteSpace:
   while (IsWhiteSpace(Current[0]) && (Current < State->EndPtr)) {
     ++State->OffsetCurrent;
     if (Current[0] == '\n') {
@@ -27,6 +27,15 @@ token LexerGetToken(lexer_state *State) {
       State->OffsetCurrent = 0;
     }
     ++Current;
+  }
+
+  if (Current[0] == '/' && (Current < State->EndPtr)) {
+    if (Current[1] == '/') {
+      while (*Current != '\n' && (Current < State->EndPtr)) {
+        ++Current;
+      }
+      goto _CheckWhiteSpace;
+    }
   }
 
   auto IsAsciiLetter = [](char C) {
