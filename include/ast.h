@@ -23,8 +23,10 @@ struct ast_node {
     VOID,
     INT_LITERAL,
     FLOAT_LITERAL,
+    STRING_LITERAL,
     VARIABLE,
     RETURN,
+    ASSIGNMENT
   };
 
   int Type;
@@ -37,5 +39,7 @@ struct ast_node {
 };
 
 ast_node ASTBuildFromParseTree(parse_node *Node);
+ast_node ASTBuildFromIdentifier(parse_node *Node, parse_node *PNode);
+ast_node ASTBuildStatement(parse_node *Node);
 
 #endif
