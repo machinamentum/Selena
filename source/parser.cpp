@@ -42,9 +42,7 @@ parse_node ParserExtractLastTokenFromChildren(parse_node *Parent) {
 void PrintToken(token *Token);
 
 void ParserCreateReturnBranches(parse_node *Node) {
-  printf("ID: %s\n", Node->Children[0].Token.Id.c_str());
   if (Node->Children[0].Token.Id.compare("return") == 0) {
-    printf("Return Node\n\n\n\n");
     std::vector<parse_node> ChildrenClone =
         std::vector<parse_node>(Node->Children);
     Node->Children.clear();
@@ -52,6 +50,22 @@ void ParserCreateReturnBranches(parse_node *Node) {
     parse_node SubNode;
     SubNode.Type = parse_node::E;
     for (int i = 1; i < ChildrenClone.size(); ++i) {
+      SubNode.Children.push_back(ChildrenClone[i]);
+    }
+    Node->Children.push_back(SubNode);
+  }
+}
+
+void ParserCreateAssignmentBranches(parse_node *Node) {
+  if (Node->Children[1].Token.Type == '=') {
+    std::vector<parse_node> ChildrenClone =
+        std::vector<parse_node>(Node->Children);
+    Node->Children.clear();
+    Node->Children.push_back(ChildrenClone[0]);
+    Node->Children.push_back(ChildrenClone[1]);
+    parse_node SubNode;
+    SubNode.Type = parse_node::E;
+    for (int i = 2; i < ChildrenClone.size(); ++i) {
       SubNode.Children.push_back(ChildrenClone[i]);
     }
     Node->Children.push_back(SubNode);
@@ -116,6 +130,7 @@ parse_node ParserGetNode(lexer_state *State, int StatementEnd) {
       ParserCreateStatmentBranches(&Node, ';');
       for (int i = 0; i < Node.Children.size(); ++i) {
         ParserCreateReturnBranches(&Node.Children[i]);
+        ParserCreateAssignmentBranches(&Node.Children[i]);
       }
       NodeParent.Children.push_back(Node);
       NodeParent.Children.push_back(Child);
