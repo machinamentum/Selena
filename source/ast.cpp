@@ -50,14 +50,17 @@ ast_node ASTBuildVariable(parse_node *Node) {
 
 ast_node ASTBuildStatement(parse_node *Node) {
   ast_node ASTNode;
+  ASTNode.Type = ast_node::NONE;
   int Type = ASTGetTypeFromString(Node->Children[0].Token.Id);
   if (Type == ast_node::NONE) {
     if (Node->Children[0].Token.Type == token::IDENTIFIER &&
         Node->Children[1].Token.Type == '=') {
-      ASTNode.Type = ast_node::ASSIGNMENT;
-      ASTNode.Id = Node->Children[0].Token.Id;
-      ASTNode.Children.push_back(
+      ast_node ASTTemp;
+      ASTTemp.Type = ast_node::ASSIGNMENT;
+      ASTTemp.Id = Node->Children[0].Token.Id;
+      ASTTemp.Children.push_back(
           ASTBuildFromParseTree(&Node->Children[2]).Children[0]);
+      ASTNode.Children.push_back(ASTTemp);
     } else {
       ast_node ASTTemp = ASTBuildFromIdentifier(&Node->Children[0], Node);
       if (ASTTemp.Type == ast_node::STRUCT) {
