@@ -59,8 +59,12 @@ ast_node ASTBuildStatement(parse_node *Node) {
       ASTNode.Children.push_back(
           ASTBuildFromParseTree(&Node->Children[2]).Children[0]);
     } else {
-      ASTNode.Children.push_back(
-          ASTBuildFromIdentifier(&Node->Children[0], Node));
+      ast_node ASTTemp = ASTBuildFromIdentifier(&Node->Children[0], Node);
+      if (ASTTemp.Type == ast_node::STRUCT) {
+        ASTNode.DefinedTypes.push_back(ASTTemp);
+      } else {
+        ASTNode.Children.push_back(ASTTemp);
+      }
     }
   }
 
@@ -81,7 +85,8 @@ ast_node ASTBuildStruct(parse_node *Node) {
 
   for (int i = 3; i < Node->Children.size(); ++i) {
     ast_node ChildNode = ASTBuildFromParseTree(&Node->Children[i]);
-    if (ChildNode.Type == ast_node::NONE && ChildNode.Children.size() == 0)
+    if (ChildNode.Type == ast_node::NONE && ChildNode.Children.size() == 0 &&
+        ChildNode.DefinedTypes.size() == 0)
       continue;
 
     for (int i = 0; i < ChildNode.Children.size(); ++i) {
@@ -146,15 +151,26 @@ ast_node ASTBuildFromParseTree(parse_node *PNode) {
     for (parse_node &PN : PNode->Children) {
       if (PN.Type == parse_node::E) {
         ast_node ChildNode = ASTBuildFromParseTree(&PN);
-        if (ChildNode.Type == ast_node::NONE && ChildNode.Children.size() == 0)
+        if (ChildNode.Type == ast_node::NONE &&
+            ChildNode.Children.size() == 0 &&
+            ChildNode.DefinedTypes.size() == 0)
           continue;
 
         for (int i = 0; i < ChildNode.Children.size(); ++i) {
           ASTNode.Children.push_back(ChildNode.Children[i]);
         }
 
+        for (int i = 0; i < ChildNode.DefinedTypes.size(); ++i) {
+          ASTNode.DefinedTypes.push_back(ChildNode.DefinedTypes[i]);
+        }
+
       } else {
-        ASTNode.Children.push_back(ASTBuildFromIdentifier(&PN, PNode));
+        ast_node ASTTemp = ASTBuildFromIdentifier(&PN, PNode);
+        if (ASTTemp.Type == ast_node::STRUCT) {
+          ASTNode.DefinedTypes.push_back(ASTTemp);
+        } else {
+          ASTNode.Children.push_back(ASTTemp);
+        }
         break;
       }
     }

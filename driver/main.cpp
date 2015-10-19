@@ -61,70 +61,83 @@ void PrintParseTree(parse_node *Node, int Depth) {
   }
 }
 
+void PrintAST(ast_node *AST, int Depth);
+
+void PrintASTNode(ast_node &Child, int Depth) {
+  switch (Child.Type) {
+  case ast_node::FUNCTION:
+    printf("function:%s:%d\n", Child.Id.c_str(), Child.Children.size());
+    PrintAST(&Child, Depth + 1);
+    break;
+  case ast_node::FUNCTION_CALL:
+    printf("call:%s:%d\n", Child.Id.c_str(), Child.Children.size());
+    PrintAST(&Child, Depth + 1);
+    break;
+
+  case ast_node::STRUCT:
+    printf("struct:%s:%d\n", Child.Id.c_str(), Child.Children.size());
+    PrintAST(&Child, Depth + 1);
+    break;
+
+  case ast_node::RETURN:
+    printf("return\n");
+    PrintAST(&Child, Depth + 1);
+    break;
+
+  case ast_node::ASSIGNMENT:
+    printf("%s =\n", Child.Id.c_str());
+    PrintAST(&Child, Depth + 1);
+    break;
+
+  case ast_node::VARIABLE:
+    switch (Child.VarType) {
+    case ast_node::FLOAT:
+      printf("float:%s\n", Child.Id.c_str());
+      break;
+
+    case ast_node::INT:
+      printf("int:%s\n", Child.Id.c_str());
+      break;
+
+    case ast_node::FLOAT_LITERAL:
+      printf("float:%f\n", Child.FloatValue);
+      break;
+
+    case ast_node::INT_LITERAL:
+      printf("int:%d\n", Child.IntValue);
+      break;
+
+    case ast_node::STRING_LITERAL:
+      printf("string:%s\n", Child.Id.c_str());
+      break;
+
+    default:
+      printf("var:%s\n", Child.Id.c_str());
+      break;
+    }
+    break;
+
+  default:
+    printf("\n");
+    PrintAST(&Child, Depth + 1);
+    break;
+  }
+}
+
 void PrintAST(ast_node *AST, int Depth) {
+  for (ast_node Type : AST->DefinedTypes) {
+    for (int i = 0; i < Depth; ++i) {
+      printf("  ");
+    }
+    printf("N%d ", Depth);
+    PrintASTNode(Type, Depth);
+  }
   for (ast_node Child : AST->Children) {
     for (int i = 0; i < Depth; ++i) {
       printf("  ");
     }
     printf("D%d ", Depth);
-    switch (Child.Type) {
-    case ast_node::FUNCTION:
-      printf("function:%s:%d\n", Child.Id.c_str(), Child.Children.size());
-      PrintAST(&Child, Depth + 1);
-      break;
-    case ast_node::FUNCTION_CALL:
-      printf("call:%s:%d\n", Child.Id.c_str(), Child.Children.size());
-      PrintAST(&Child, Depth + 1);
-      break;
-
-    case ast_node::STRUCT:
-      printf("struct:%s:%d\n", Child.Id.c_str(), Child.Children.size());
-      PrintAST(&Child, Depth + 1);
-      break;
-
-    case ast_node::RETURN:
-      printf("return\n");
-      PrintAST(&Child, Depth + 1);
-      break;
-
-    case ast_node::ASSIGNMENT:
-      printf("%s =\n", Child.Id.c_str());
-      PrintAST(&Child, Depth + 1);
-      break;
-
-    case ast_node::VARIABLE:
-      switch (Child.VarType) {
-      case ast_node::FLOAT:
-        printf("float:%s\n", Child.Id.c_str());
-        break;
-
-      case ast_node::INT:
-        printf("int:%s\n", Child.Id.c_str());
-        break;
-
-      case ast_node::FLOAT_LITERAL:
-        printf("float:%f\n", Child.FloatValue);
-        break;
-
-      case ast_node::INT_LITERAL:
-        printf("int:%d\n", Child.IntValue);
-        break;
-
-      case ast_node::STRING_LITERAL:
-        printf("string:%s\n", Child.Id.c_str());
-        break;
-
-      default:
-        printf("var:%s\n", Child.Id.c_str());
-        break;
-      }
-      break;
-
-    default:
-      printf("\n");
-      PrintAST(&Child, Depth + 1);
-      break;
-    }
+    PrintASTNode(Child, Depth);
   }
 }
 
