@@ -1,6 +1,18 @@
 
 #include "ast.h"
 
+ast_node *ast_node::LookupType(std::string Typename) {
+  for (ast_node &Type : DefinedTypes) {
+    if (Type.Id.compare(Typename) == 0) {
+      return &Type;
+    }
+  }
+
+  if (Parent)
+    return Parent->LookupType(Typename);
+  return nullptr;
+}
+
 int ASTGetTypeFromString(std::string Typename) {
   if (Typename.compare("struct") == 0)
     return ast_node::STRUCT;
@@ -15,58 +27,68 @@ int ASTGetTypeFromString(std::string Typename) {
   return ast_node::NONE;
 }
 
-ast_node ASTBuildFunction(parse_node *Node) {
-  ast_node ASTNode;
+ast_node ast_node::BuildFunction(ast_node *Parent, parse_node *Node) {
+  ast_node ASTNode = ast_node(Parent);
   ASTNode.Type = ast_node::FUNCTION;
   ASTNode.VarType = ASTGetTypeFromString(Node->Children[0].Token.Id);
   ASTNode.Id = Node->Children[1].Token.Id;
-  ASTNode.Children.push_back(ASTBuildFromParseTree(&Node->Children[3]));
+  ASTNode.PushChild(BuildFromParseTree(&ASTNode, &Node->Children[3]));
   if (Node->Children[5].Token.Type == '{') {
     for (parse_node &Child : Node->Children[6].Children) {
-      ASTNode.Children.push_back(ASTBuildStatement(&Child));
+      ASTNode.PushChild(BuildStatement(&ASTNode, &Child));
     }
   }
   return ASTNode;
 }
 
-ast_node ASTBuildFunctionCall(parse_node *Node) {
-  ast_node ASTNode;
+ast_node ast_node::BuildFunctionCall(ast_node *Parent, parse_node *Node) {
+  ast_node ASTNode = ast_node(Parent);
   ASTNode.Type = ast_node::FUNCTION_CALL;
   ASTNode.Id = Node->Children[0].Token.Id;
-  ast_node Params = ASTBuildFromParseTree(&Node->Children[2]);
+  ast_node Params = BuildFromParseTree(&ASTNode, &Node->Children[2]);
   for (ast_node &Param : Params.Children) {
-    ASTNode.Children.push_back(Param);
+    ASTNode.PushChild(Param);
   }
   return ASTNode;
 }
 
-ast_node ASTBuildVariable(parse_node *Node) {
-  ast_node ASTNode;
+ast_node ast_node::BuildVariable(ast_node *Parent, parse_node *Node) {
+  ast_node ASTNode = ast_node(Parent);
   ASTNode.Type = ast_node::VARIABLE;
-  ASTNode.VarType = ast_node::NONE;
-  ASTNode.Id = Node->Children[0].Token.Id;
+  int Type = ASTGetTypeFromString(Node->Children[0].Token.Id);
+  if (Type == ast_node::NONE &&
+      ASTNode.LookupType(Node->Children[0].Token.Id)) {
+    ASTNode.VarType = ast_node::STRUCT;
+    ASTNode.Typename = Node->Children[0].Token.Id;
+    ASTNode.Id = Node->Children[1].Token.Id;
+  } else if (Type != ast_node::NONE) {
+    ASTNode.VarType = Type;
+  } else {
+    ASTNode.Type = ast_node::NONE;
+    ASTNode.Id = Node->Children[0].Token.Id;
+  }
   return ASTNode;
 }
 
-ast_node ASTBuildStatement(parse_node *Node) {
-  ast_node ASTNode;
+ast_node ast_node::BuildStatement(ast_node *Parent, parse_node *Node) {
+  ast_node ASTNode = ast_node(Parent);
   ASTNode.Type = ast_node::NONE;
   int Type = ASTGetTypeFromString(Node->Children[0].Token.Id);
   if (Type == ast_node::NONE) {
     if (Node->Children[0].Token.Type == token::IDENTIFIER &&
         Node->Children[1].Token.Type == '=') {
-      ast_node ASTTemp;
+      ast_node ASTTemp = ast_node(&ASTNode);
       ASTTemp.Type = ast_node::ASSIGNMENT;
       ASTTemp.Id = Node->Children[0].Token.Id;
-      ASTTemp.Children.push_back(
-          ASTBuildFromParseTree(&Node->Children[2]).Children[0]);
-      ASTNode.Children.push_back(ASTTemp);
+      ASTTemp.PushChild(
+          BuildFromParseTree(&ASTNode, &Node->Children[2]).Children[0]);
+      ASTNode.PushChild(ASTTemp);
     } else {
-      ast_node ASTTemp = ASTBuildFromIdentifier(&Node->Children[0], Node);
+      ast_node ASTTemp = BuildFromIdentifier(&ASTNode, Node);
       if (ASTTemp.Type == ast_node::STRUCT) {
         ASTNode.DefinedTypes.push_back(ASTTemp);
       } else {
-        ASTNode.Children.push_back(ASTTemp);
+        ASTNode.PushChild(ASTTemp);
       }
     }
   }
@@ -74,34 +96,34 @@ ast_node ASTBuildStatement(parse_node *Node) {
   return ASTNode;
 }
 
-ast_node ASTBuildReturn(parse_node *Node) {
-  ast_node ASTNode;
+ast_node ast_node::BuildReturn(ast_node *Parent, parse_node *Node) {
+  ast_node ASTNode = ast_node(Parent);
   ASTNode.Type = ast_node::RETURN;
-  ASTNode.Children.push_back(ASTBuildStatement(&Node->Children[1]));
+  ASTNode.PushChild(BuildStatement(&ASTNode, &Node->Children[1]));
   return ASTNode;
 }
 
-ast_node ASTBuildStruct(parse_node *Node) {
-  ast_node ASTNode;
+ast_node ast_node::BuildStruct(ast_node *Parent, parse_node *Node) {
+  ast_node ASTNode = ast_node(Parent);
   ASTNode.Type = ast_node::STRUCT;
   ASTNode.Id = Node->Children[1].Token.Id;
 
   for (int i = 3; i < Node->Children.size(); ++i) {
-    ast_node ChildNode = ASTBuildFromParseTree(&Node->Children[i]);
+    ast_node ChildNode = BuildFromParseTree(&ASTNode, &Node->Children[i]);
     if (ChildNode.Type == ast_node::NONE && ChildNode.Children.size() == 0 &&
         ChildNode.DefinedTypes.size() == 0)
       continue;
 
     for (int i = 0; i < ChildNode.Children.size(); ++i) {
-      ASTNode.Children.push_back(ChildNode.Children[i]);
+      ASTNode.PushChild(ChildNode.Children[i]);
     }
   }
 
   return ASTNode;
 }
 
-ast_node ASTBuildConstantPrimitive(parse_node *Node) {
-  ast_node ASTNode;
+ast_node ast_node::BuildConstantPrimitive(ast_node *Parent, parse_node *Node) {
+  ast_node ASTNode = ast_node(Parent);
   ASTNode.Type = ast_node::VARIABLE;
   ASTNode.VarType = ast_node::FLOAT;
   if (Node->Token.Type == token::FLOAT) {
@@ -114,53 +136,56 @@ ast_node ASTBuildConstantPrimitive(parse_node *Node) {
   return ASTNode;
 }
 
-ast_node ASTBuildFromIdentifier(parse_node *Node, parse_node *PNode) {
+ast_node ast_node::BuildFromIdentifier(ast_node *ASTParent, parse_node *PNode) {
+  parse_node *Node = &PNode->Children[0];
   token *Token = &Node->Token;
   std::string Id = Token->Id;
   int Type = ASTGetTypeFromString(Id);
   if (Type != ast_node::NONE) {
     if (PNode->Children[2].Token.Type == '(') {
-      return ASTBuildFunction(PNode);
+      return BuildFunction(ASTParent, PNode);
     } else if (Type == ast_node::STRUCT) {
-      return ASTBuildStruct(PNode);
+      return BuildStruct(ASTParent, PNode);
     } else if (Type == ast_node::RETURN) {
-      return ASTBuildReturn(PNode);
+      return BuildReturn(ASTParent, PNode);
     } else {
-      return ASTBuildVariable(PNode);
+      return BuildVariable(ASTParent, PNode);
     }
   } else {
-    if (PNode->Children[1].Token.Type == '(') {
-      return ASTBuildFunctionCall(PNode);
+    if (ASTParent->LookupType(Id) != nullptr) {
+      return BuildVariable(ASTParent, PNode);
+    } else if (PNode->Children[1].Token.Type == '(') {
+      return BuildFunctionCall(ASTParent, PNode);
     } else if (Token->Type == token::DQSTRING) {
-      ast_node StringNode;
+      ast_node StringNode = ast_node(ASTParent);
       StringNode.Type = ast_node::VARIABLE;
       StringNode.VarType = ast_node::STRING_LITERAL;
       StringNode.Id = Id;
       return StringNode;
     } else if (Node->Token.Type == token::FLOAT ||
                Node->Token.Type == token::INT) {
-      return ASTBuildConstantPrimitive(Node);
+      return BuildConstantPrimitive(ASTParent, Node);
     } else if (PNode->Children[1].Token.Type == ';') {
-      return ASTBuildVariable(PNode);
+      return BuildVariable(ASTParent, PNode);
     }
   }
-  return ast_node();
+  return ast_node(ASTParent);
 }
 
-ast_node ASTBuildFromParseTree(parse_node *PNode) {
-  ast_node ASTNode;
+ast_node ast_node::BuildFromParseTree(ast_node *Parent, parse_node *PNode) {
+  ast_node ASTNode = ast_node(Parent);
   ASTNode.Type = ast_node::NONE;
   if (PNode->Type == parse_node::E) {
     for (parse_node &PN : PNode->Children) {
       if (PN.Type == parse_node::E) {
-        ast_node ChildNode = ASTBuildFromParseTree(&PN);
+        ast_node ChildNode = BuildFromParseTree(&ASTNode, &PN);
         if (ChildNode.Type == ast_node::NONE &&
             ChildNode.Children.size() == 0 &&
             ChildNode.DefinedTypes.size() == 0)
           continue;
 
         for (int i = 0; i < ChildNode.Children.size(); ++i) {
-          ASTNode.Children.push_back(ChildNode.Children[i]);
+          ASTNode.PushChild(ChildNode.Children[i]);
         }
 
         for (int i = 0; i < ChildNode.DefinedTypes.size(); ++i) {
@@ -168,11 +193,11 @@ ast_node ASTBuildFromParseTree(parse_node *PNode) {
         }
 
       } else {
-        ast_node ASTTemp = ASTBuildFromIdentifier(&PN, PNode);
+        ast_node ASTTemp = BuildFromIdentifier(&ASTNode, PNode);
         if (ASTTemp.Type == ast_node::STRUCT) {
           ASTNode.DefinedTypes.push_back(ASTTemp);
         } else {
-          ASTNode.Children.push_back(ASTTemp);
+          ASTNode.PushChild(ASTTemp);
         }
         break;
       }

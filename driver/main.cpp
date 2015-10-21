@@ -148,7 +148,7 @@ int main(int argc, char **argv) {
   LexerInit(&Lexer, Source, Source + Size);
   parse_node RootNode = ParserGetNode(&Lexer, token::END);
   PrintParseTree(&RootNode, 0);
-  ast_node ASTRoot = ASTBuildFromParseTree(&RootNode);
+  ast_node ASTRoot = ast_node::BuildFromParseTree(nullptr, &RootNode);
   PrintAST(&ASTRoot, 0);
   neocode_program Program = CGNeoBuildProgramInstance(&ASTRoot);
   CGNeoGenerateCode(&Program, std::cout);
