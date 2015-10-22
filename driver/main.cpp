@@ -147,15 +147,42 @@ void PrintAST(ast_node *AST, int Depth) {
 }
 
 int main(int argc, char **argv) {
+  bool PrintTrees = false;
+  char *InputFilePath = nullptr;
+  char *OutputFilePath = nullptr;
+  for (int i = 1; i < argc; ++i) {
+    if (strcmp(argv[i], "--verbose") == 0) {
+      PrintTrees = true;
+    } else {
+      if (!InputFilePath) {
+        InputFilePath = argv[i];
+      } else {
+        OutputFilePath = argv[i];
+      }
+    }
+  }
+
   lexer_state Lexer;
   long Size;
-  char *Source = SlurpFile(argv[1], &Size);
+  if (!InputFilePath) {
+    printf("Error: no input file\n");
+    return -1;
+  }
+  char *Source = SlurpFile(InputFilePath, &Size);
   LexerInit(&Lexer, Source, Source + Size);
   parse_node RootNode = ParserGetNode(&Lexer, token::END);
-  PrintParseTree(&RootNode, 0);
+  if (PrintTrees)
+    PrintParseTree(&RootNode, 0);
   ast_node ASTRoot = ast_node::BuildFromParseTree(nullptr, &RootNode);
-  PrintAST(&ASTRoot, 0);
+  if (PrintTrees)
+    PrintAST(&ASTRoot, 0);
   neocode_program Program = CGNeoBuildProgramInstance(&ASTRoot);
-  CGNeoGenerateCode(&Program, std::cout);
+  if (OutputFilePath) {
+    std::ofstream Fs;
+    Fs.open(OutputFilePath);
+    CGNeoGenerateCode(&Program, Fs);
+  } else {
+    CGNeoGenerateCode(&Program, std::cout);
+  }
   return 0;
 }
