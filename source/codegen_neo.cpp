@@ -85,11 +85,16 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
   }
 
   if (ASTNode->Type == ast_node::ASSIGNMENT) {
-    neocode_instruction In;
-    In.Type = neocode_instruction::MOV;
-    In.Dst = *Function->GetVariable(ASTNode->Id);
-    In.Src1 = GetInput();
-    return In;
+    if (ASTNode->Children[0].Children.size()) {
+      Function->Instructions.back().Dst = *Function->GetVariable(ASTNode->Id);
+      return neocode_instruction();
+    } else {
+      neocode_instruction In;
+      In.Type = neocode_instruction::MOV;
+      In.Dst = *Function->GetVariable(ASTNode->Id);
+      In.Src1 = GetInput();
+      return In;
+    }
   }
 
   if (ASTNode->Children[0].Children.size()) {
@@ -138,6 +143,8 @@ neocode_program CGNeoBuildProgramInstance(ast_node *ASTNode) {
 void CGNeoGenerateInstruction(neocode_instruction *Instruction,
                               std::ostream &os) {
   switch (Instruction->Type) {
+  case neocode_instruction::EMPTY:
+    break;
   case neocode_instruction::INLINE:
     os << " " << Instruction->ExtraData << std::endl;
     break;
