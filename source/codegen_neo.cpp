@@ -12,7 +12,9 @@ template <typename T> string to_string(T Value) {
 };
 #endif
 
-static std::string RegisterName(neocode_variable &Var) {
+static std::string RegisterName(neocode_variable &Var, int UseRaw = 0) {
+  if (Var.Name.size() && !UseRaw)
+    return Var.Name;
   if (Var.RegisterType == 0) {
     int Register = Var.Register;
     if (Register < 0x10)
@@ -180,10 +182,10 @@ void CGNeoGenerateCode(neocode_program *Program, std::ostream &os) {
   os << ".alias CaelinaCCVersion c95 as (0.0, 0.0, 0.0, 0.1)" << std::endl;
   for (neocode_variable &V : Program->Globals) {
     if (V.RegisterType > 0) {
-      os << ".alias " << V.Name << " " << RegisterName(V) << " as "
+      os << ".alias " << V.Name << " " << RegisterName(V, 1) << " as "
          << OutputName(V.RegisterType) << std::endl;
     } else {
-      os << ".alias " << V.Name << " " << RegisterName(V) << std::endl;
+      os << ".alias " << V.Name << " " << RegisterName(V, 1) << std::endl;
     }
   }
   for (neocode_function &Function : Program->Functions) {
