@@ -16,7 +16,7 @@ struct ast_node {
     STRUCT,
     PLUS,
     MINUS,
-    STAR,
+    MULTIPLY,
     DIVIDE,
     INT,
     FLOAT,

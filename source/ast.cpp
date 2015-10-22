@@ -55,6 +55,10 @@ ast_node ast_node::BuildFunctionCall(ast_node *Parent, parse_node *Node) {
 ast_node ast_node::BuildVariable(ast_node *Parent, parse_node *Node) {
   ast_node ASTNode = ast_node(Parent);
   ASTNode.Type = ast_node::VARIABLE;
+  if (Node->Type == parse_node::T) {
+    ASTNode.Id = Node->Token.Id;
+    return ASTNode;
+  }
   int Type = ASTGetTypeFromString(Node->Children[0].Token.Id);
   if (Type == ast_node::NONE &&
       ASTNode.LookupType(Node->Children[0].Token.Id)) {
@@ -64,7 +68,6 @@ ast_node ast_node::BuildVariable(ast_node *Parent, parse_node *Node) {
   } else if (Type != ast_node::NONE) {
     ASTNode.VarType = Type;
   } else {
-    ASTNode.Type = ast_node::NONE;
     ASTNode.Id = Node->Children[0].Token.Id;
   }
   return ASTNode;
@@ -141,7 +144,14 @@ ast_node ast_node::BuildFromIdentifier(ast_node *ASTParent, parse_node *PNode) {
   token *Token = &Node->Token;
   std::string Id = Token->Id;
   int Type = ASTGetTypeFromString(Id);
-  if (Type != ast_node::NONE) {
+
+  if (PNode->Children[1].Token.Type == '*') {
+    ast_node MultNode = ast_node(ASTParent);
+    MultNode.Type = ast_node::MULTIPLY;
+    MultNode.Id = PNode->Children[0].Token.Id;
+    MultNode.PushChild(BuildVariable(&MultNode, &PNode->Children[2]));
+    return MultNode;
+  } else if (Type != ast_node::NONE) {
     if (PNode->Children[2].Token.Type == '(') {
       return BuildFunction(ASTParent, PNode);
     } else if (Type == ast_node::STRUCT) {
@@ -152,9 +162,7 @@ ast_node ast_node::BuildFromIdentifier(ast_node *ASTParent, parse_node *PNode) {
       return BuildVariable(ASTParent, PNode);
     }
   } else {
-    if (ASTParent->LookupType(Id) != nullptr) {
-      return BuildVariable(ASTParent, PNode);
-    } else if (PNode->Children[1].Token.Type == '(') {
+    if (PNode->Children[1].Token.Type == '(') {
       return BuildFunctionCall(ASTParent, PNode);
     } else if (Token->Type == token::DQSTRING) {
       ast_node StringNode = ast_node(ASTParent);

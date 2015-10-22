@@ -90,7 +90,7 @@ struct neocode_variable {
 
 struct neocode_instruction {
 
-  enum { INLINE, MOV };
+  enum { INLINE, MOV, MUL };
 
   int Type;
   neocode_variable Dst;

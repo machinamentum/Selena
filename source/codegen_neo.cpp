@@ -46,23 +46,57 @@ neocode_variable *neocode_function::GetVariable(std::string Name) {
   }
 }
 
-void CGNeoBuildStatement(neocode_function *Function, ast_node *ASTNode) {
+neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
+                                          ast_node *ASTNode) {
+  neocode_variable DependVar;
+  if (ASTNode->Children[0].Children.size()) {
+    auto Depend = CGNeoBuildInstruction(Function, &ASTNode->Children[0]);
+    DependVar = Depend.Dst;
+    Function->Instructions.push_back(Depend);
+  }
+
+  auto GetInput = [&Function, &ASTNode, &DependVar]() {
+    if (ASTNode->Children[0].Children.size()) {
+      return DependVar;
+    } else {
+      return *Function->GetVariable(ASTNode->Children[0].Id);
+    }
+  };
+
   if (ASTNode->Type == ast_node::FUNCTION_CALL) {
     if (ASTNode->Id.compare("asm") == 0) {
       neocode_instruction In;
       In.Type = neocode_instruction::INLINE;
       In.ExtraData = ASTNode->Children[0].Id;
-      Function->Instructions.push_back(In);
+      return In;
     }
+  }
+
+  if (ASTNode->Type == ast_node::MULTIPLY) {
+    neocode_instruction In;
+    In.Type = neocode_instruction::MUL;
+    In.Dst = (neocode_variable){"", "", ast_node::STRUCT,
+                                Function->Program->Registers.AllocTemp(), 0};
+    In.Src1 = GetInput();
+    In.Src2 = *Function->GetVariable(ASTNode->Id);
+    return In;
   }
 
   if (ASTNode->Type == ast_node::ASSIGNMENT) {
     neocode_instruction In;
     In.Type = neocode_instruction::MOV;
     In.Dst = *Function->GetVariable(ASTNode->Id);
-    In.Src1 = *Function->GetVariable(ASTNode->Children[0].Id);
-    Function->Instructions.push_back(In);
+    In.Src1 = GetInput();
+    return In;
   }
+
+  if (ASTNode->Children[0].Children.size()) {
+    Function->Program->Registers.Free(DependVar.Register);
+  }
+}
+
+void CGNeoBuildStatement(neocode_function *Function, ast_node *ASTNode) {
+  Function->Instructions.push_back(CGNeoBuildInstruction(Function, ASTNode));
 }
 
 neocode_function CGNeoBuildFunction(neocode_program *Program,
@@ -89,6 +123,9 @@ neocode_program CGNeoBuildProgramInstance(ast_node *ASTNode) {
   Program.Globals.push_back(
       (neocode_variable){"gl_Color", "vec4", ast_node::STRUCT,
                          Program.Registers.AllocVertex(), 0});
+  Program.Globals.push_back((neocode_variable){
+      "gl_ModelViewProjectionMatrix", "vec4", ast_node::STRUCT,
+      Program.Registers.AllocConstant(), 0});
   for (ast_node &Node : ASTNode->Children) {
     if (Node.Type == ast_node::FUNCTION)
       Program.Functions.push_back(CGNeoBuildFunction(&Program, &Node));
@@ -107,6 +144,13 @@ void CGNeoGenerateInstruction(neocode_instruction *Instruction,
     os << " "
        << "mov " << RegisterName(Instruction->Dst) << ", "
        << RegisterName(Instruction->Src1) << std::endl;
+    break;
+
+  case neocode_instruction::MUL:
+    os << " "
+       << "mul " << RegisterName(Instruction->Dst) << ", "
+       << RegisterName(Instruction->Src1) << ", "
+       << RegisterName(Instruction->Src2) << std::endl;
     break;
 
   default:
