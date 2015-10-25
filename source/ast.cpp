@@ -30,11 +30,32 @@ int ASTGetTypeFromString(std::string Typename) {
 ast_node ast_node::BuildFunction(ast_node *Parent, parse_node *Node) {
   ast_node ASTNode = ast_node(Parent);
   ASTNode.Type = ast_node::FUNCTION;
-  ASTNode.VarType = ASTGetTypeFromString(Node->Children[0].Token.Id);
-  ASTNode.Id = Node->Children[1].Token.Id;
-  ASTNode.PushChild(BuildFromParseTree(&ASTNode, &Node->Children[3]));
-  if (Node->Children[5].Token.Type == '{') {
-    for (parse_node &Child : Node->Children[6].Children) {
+  int ParamsIndex = -1;
+  for (int i = 1; i < Node->Children.size(); ++i) {
+    if (Node->Children[i].Token.Type == token::IDENTIFIER &&
+        Node->Children[i + 1].Token.Type == '(') {
+      ParamsIndex = i;
+      break;
+    }
+  }
+
+  for (int i = 0; i < ParamsIndex; ++i) {
+    int Type = ASTGetTypeFromString(Node->Children[i].Token.Id);
+    if (Type != ast_node::NONE) {
+      ASTNode.VarType = Type;
+    } else if (Node->Children[i].Token.Id.compare("inline") == 0) {
+      ASTNode.Modifiers |= ast_node::INLINE;
+    } else {
+      printf("Unrecognized function specifier: %s\n",
+             Node->Children[i].Token.Id.c_str());
+    }
+  }
+  ASTNode.Id = Node->Children[ParamsIndex].Token.Id;
+  printf("Function: %s\n", ASTNode.Id.c_str());
+  ASTNode.PushChild(
+      BuildFromParseTree(&ASTNode, &Node->Children[ParamsIndex + 2]));
+  if (Node->Children[ParamsIndex + 4].Token.Type == '{') {
+    for (parse_node &Child : Node->Children[ParamsIndex + 5].Children) {
       ASTNode.PushChild(BuildStatement(&ASTNode, &Child));
     }
   }
@@ -55,6 +76,7 @@ ast_node ast_node::BuildFunctionCall(ast_node *Parent, parse_node *Node) {
 ast_node ast_node::BuildVariable(ast_node *Parent, parse_node *Node) {
   ast_node ASTNode = ast_node(Parent);
   ASTNode.Type = ast_node::VARIABLE;
+  ASTNode.Modifiers = 0;
   if (Node->Type == parse_node::T) {
     ASTNode.Id = Node->Token.Id;
     return ASTNode;
@@ -67,6 +89,8 @@ ast_node ast_node::BuildVariable(ast_node *Parent, parse_node *Node) {
     ASTNode.Id = Node->Children[1].Token.Id;
   } else if (Type != ast_node::NONE) {
     ASTNode.VarType = Type;
+    ASTNode.Id = Node->Children[1].Token.Id;
+    ASTNode.Modifiers |= ast_node::DECLARE;
   } else {
     ASTNode.Id = Node->Children[0].Token.Id;
   }
@@ -93,6 +117,13 @@ ast_node ast_node::BuildStatement(ast_node *Parent, parse_node *Node) {
       } else {
         ASTNode.PushChild(ASTTemp);
       }
+    }
+  } else {
+    ast_node ASTTemp = BuildFromIdentifier(&ASTNode, Node);
+    if (ASTTemp.Type == ast_node::STRUCT) {
+      ASTNode.DefinedTypes.push_back(ASTTemp);
+    } else {
+      ASTNode.PushChild(ASTTemp);
     }
   }
 
@@ -151,10 +182,20 @@ ast_node ast_node::BuildFromIdentifier(ast_node *ASTParent, parse_node *PNode) {
     MultNode.Id = PNode->Children[0].Token.Id;
     MultNode.PushChild(BuildVariable(&MultNode, &PNode->Children[2]));
     return MultNode;
+  } else if (PNode->Children[1].Token.Type == '/') {
+    ast_node MultNode = ast_node(ASTParent);
+    MultNode.Type = ast_node::DIVIDE;
+    MultNode.Id = PNode->Children[0].Token.Id;
+    MultNode.PushChild(BuildVariable(&MultNode, &PNode->Children[2]));
+    return MultNode;
   } else if (Type != ast_node::NONE) {
-    if (PNode->Children[2].Token.Type == '(') {
-      return BuildFunction(ASTParent, PNode);
-    } else if (Type == ast_node::STRUCT) {
+    for (int i = 1; i < PNode->Children.size() - 1; ++i) {
+      if (PNode->Children[i].Token.Type == token::IDENTIFIER &&
+          PNode->Children[i + 1].Token.Type == '(') {
+        return BuildFunction(ASTParent, PNode);
+      }
+    }
+    if (Type == ast_node::STRUCT) {
       return BuildStruct(ASTParent, PNode);
     } else if (Type == ast_node::RETURN) {
       return BuildReturn(ASTParent, PNode);
@@ -162,6 +203,14 @@ ast_node ast_node::BuildFromIdentifier(ast_node *ASTParent, parse_node *PNode) {
       return BuildVariable(ASTParent, PNode);
     }
   } else {
+    if (PNode->Children[0].Token.Id.compare("inline") == 0) {
+      for (int i = 1; i < PNode->Children.size() - 1; ++i) {
+        if (PNode->Children[i].Token.Type == token::IDENTIFIER &&
+            PNode->Children[i + 1].Token.Type == '(') {
+          return BuildFunction(ASTParent, PNode);
+        }
+      }
+    }
     if (PNode->Children[1].Token.Type == '(') {
       return BuildFunctionCall(ASTParent, PNode);
     } else if (Token->Type == token::DQSTRING) {
@@ -173,7 +222,7 @@ ast_node ast_node::BuildFromIdentifier(ast_node *ASTParent, parse_node *PNode) {
     } else if (Node->Token.Type == token::FLOAT ||
                Node->Token.Type == token::INT) {
       return BuildConstantPrimitive(ASTParent, Node);
-    } else if (PNode->Children[1].Token.Type == ';') {
+    } else {
       return BuildVariable(ASTParent, PNode);
     }
   }

@@ -50,6 +50,16 @@ neocode_variable *neocode_function::GetVariable(std::string Name) {
 
 neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
                                           ast_node *ASTNode) {
+
+  if ((ASTNode->Type == ast_node::VARIABLE) &&
+      (ASTNode->Modifiers & ast_node::DECLARE)) {
+    neocode_variable Var;
+    Var.Name = ASTNode->Id;
+    Var.Type = ASTNode->VarType;
+    Var.Register = Function->Program->Registers.AllocTemp();
+    Function->Variables.push_back(Var);
+    return neocode_instruction();
+  }
   neocode_variable DependVar;
   if (ASTNode->Children[0].Children.size()) {
     auto Depend = CGNeoBuildInstruction(Function, &ASTNode->Children[0]);

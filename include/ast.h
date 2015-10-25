@@ -29,8 +29,11 @@ struct ast_node {
     ASSIGNMENT
   };
 
+  enum { INLINE = 1, DECLARE = (1 << 1) };
+
   int Type;
   int VarType;
+  int Modifiers;
   std::string Id;
   std::vector<ast_node> TypeTable;
   std::vector<ast_node> Children;
