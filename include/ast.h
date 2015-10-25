@@ -37,7 +37,6 @@ struct ast_node {
   std::string Id;
   std::vector<ast_node> TypeTable;
   std::vector<ast_node> Children;
-  std::vector<ast_node> DefinedTypes;
   float FloatValue;
   long IntValue;
   std::string Typename;

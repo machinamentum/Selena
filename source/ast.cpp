@@ -2,8 +2,8 @@
 #include "ast.h"
 
 ast_node *ast_node::LookupType(std::string Typename) {
-  for (ast_node &Type : DefinedTypes) {
-    if (Type.Id.compare(Typename) == 0) {
+  for (ast_node &Type : Children) {
+    if (Type.Type == ast_node::STRUCT && Type.Id.compare(Typename) == 0) {
       return &Type;
     }
   }
@@ -112,19 +112,11 @@ ast_node ast_node::BuildStatement(ast_node *Parent, parse_node *Node) {
       ASTNode.PushChild(ASTTemp);
     } else {
       ast_node ASTTemp = BuildFromIdentifier(&ASTNode, Node);
-      if (ASTTemp.Type == ast_node::STRUCT) {
-        ASTNode.DefinedTypes.push_back(ASTTemp);
-      } else {
-        ASTNode.PushChild(ASTTemp);
-      }
+      ASTNode.PushChild(ASTTemp);
     }
   } else {
     ast_node ASTTemp = BuildFromIdentifier(&ASTNode, Node);
-    if (ASTTemp.Type == ast_node::STRUCT) {
-      ASTNode.DefinedTypes.push_back(ASTTemp);
-    } else {
-      ASTNode.PushChild(ASTTemp);
-    }
+    ASTNode.PushChild(ASTTemp);
   }
 
   return ASTNode;
@@ -144,8 +136,7 @@ ast_node ast_node::BuildStruct(ast_node *Parent, parse_node *Node) {
 
   for (int i = 3; i < Node->Children.size(); ++i) {
     ast_node ChildNode = BuildFromParseTree(&ASTNode, &Node->Children[i]);
-    if (ChildNode.Type == ast_node::NONE && ChildNode.Children.size() == 0 &&
-        ChildNode.DefinedTypes.size() == 0)
+    if (ChildNode.Type == ast_node::NONE && ChildNode.Children.size() == 0)
       continue;
 
     for (int i = 0; i < ChildNode.Children.size(); ++i) {
@@ -236,26 +227,16 @@ ast_node ast_node::BuildFromParseTree(ast_node *Parent, parse_node *PNode) {
     for (parse_node &PN : PNode->Children) {
       if (PN.Type == parse_node::E) {
         ast_node ChildNode = BuildFromParseTree(&ASTNode, &PN);
-        if (ChildNode.Type == ast_node::NONE &&
-            ChildNode.Children.size() == 0 &&
-            ChildNode.DefinedTypes.size() == 0)
+        if (ChildNode.Type == ast_node::NONE && ChildNode.Children.size() == 0)
           continue;
 
         for (int i = 0; i < ChildNode.Children.size(); ++i) {
           ASTNode.PushChild(ChildNode.Children[i]);
         }
 
-        for (int i = 0; i < ChildNode.DefinedTypes.size(); ++i) {
-          ASTNode.DefinedTypes.push_back(ChildNode.DefinedTypes[i]);
-        }
-
       } else {
         ast_node ASTTemp = BuildFromIdentifier(&ASTNode, PNode);
-        if (ASTTemp.Type == ast_node::STRUCT) {
-          ASTNode.DefinedTypes.push_back(ASTTemp);
-        } else {
-          ASTNode.PushChild(ASTTemp);
-        }
+        ASTNode.PushChild(ASTTemp);
         break;
       }
     }

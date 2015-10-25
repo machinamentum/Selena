@@ -116,6 +116,10 @@ void PrintASTNode(ast_node &Child, int Depth) {
       printf("string:%s\n", Child.Id.c_str());
       break;
 
+    case ast_node::STRUCT:
+      printf("struct:%s:%s\n", Child.Typename.c_str(), Child.Id.c_str());
+      break;
+
     default:
       printf("var:%s\n", Child.Id.c_str());
       break;
@@ -130,13 +134,6 @@ void PrintASTNode(ast_node &Child, int Depth) {
 }
 
 void PrintAST(ast_node *AST, int Depth) {
-  for (ast_node Type : AST->DefinedTypes) {
-    for (int i = 0; i < Depth; ++i) {
-      printf("  ");
-    }
-    printf("N%d ", Depth);
-    PrintASTNode(Type, Depth);
-  }
   for (ast_node Child : AST->Children) {
     for (int i = 0; i < Depth; ++i) {
       printf("  ");
