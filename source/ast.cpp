@@ -46,12 +46,10 @@ ast_node ast_node::BuildFunction(ast_node *Parent, parse_node *Node) {
     } else if (Node->Children[i].Token.Id.compare("inline") == 0) {
       ASTNode.Modifiers |= ast_node::INLINE;
     } else {
-      printf("Unrecognized function specifier: %s\n",
-             Node->Children[i].Token.Id.c_str());
+      // do error
     }
   }
   ASTNode.Id = Node->Children[ParamsIndex].Token.Id;
-  printf("Function: %s\n", ASTNode.Id.c_str());
   ASTNode.PushChild(
       BuildFromParseTree(&ASTNode, &Node->Children[ParamsIndex + 2]));
   if (Node->Children[ParamsIndex + 4].Token.Type == '{') {
@@ -171,7 +169,7 @@ ast_node ast_node::BuildFromIdentifier(ast_node *ASTParent, parse_node *PNode) {
     ast_node MultNode = ast_node(ASTParent);
     MultNode.Type = ast_node::MULTIPLY;
     MultNode.Id = PNode->Children[0].Token.Id;
-    MultNode.PushChild(BuildVariable(&MultNode, &PNode->Children[2]));
+    MultNode.PushChild(BuildFromIdentifier(&MultNode, &PNode->Children[2]));
     return MultNode;
   } else if (PNode->Children[1].Token.Type == '/') {
     ast_node MultNode = ast_node(ASTParent);
