@@ -56,6 +56,22 @@ void ParserCreateReturnBranches(parse_node *Node) {
   }
 }
 
+void ParserCreateMultiplyBranches(parse_node *Node) {
+  if (Node->Children[1].Token.Type == '*') {
+    std::vector<parse_node> ChildrenClone =
+        std::vector<parse_node>(Node->Children);
+    Node->Children.clear();
+    Node->Children.push_back(ChildrenClone[0]);
+    Node->Children.push_back(ChildrenClone[1]);
+    parse_node SubNode;
+    SubNode.Type = parse_node::E;
+    for (int i = 2; i < ChildrenClone.size(); ++i) {
+      SubNode.Children.push_back(ChildrenClone[i]);
+    }
+    Node->Children.push_back(SubNode);
+  }
+}
+
 void ParserCreateAssignmentBranches(parse_node *Node) {
   if (Node->Children[1].Token.Type == '=') {
     std::vector<parse_node> ChildrenClone =
@@ -68,7 +84,16 @@ void ParserCreateAssignmentBranches(parse_node *Node) {
     for (int i = 2; i < ChildrenClone.size(); ++i) {
       SubNode.Children.push_back(ChildrenClone[i]);
     }
+    ParserCreateMultiplyBranches(&SubNode);
     Node->Children.push_back(SubNode);
+  }
+}
+
+void ParserCreatePrecedenceBranches(parse_node *Node) {
+  for (parse_node &N : Node->Children) {
+    ParserCreateReturnBranches(&N);
+    ParserCreateMultiplyBranches(&N);
+    ParserCreateAssignmentBranches(&N);
   }
 }
 
@@ -128,10 +153,7 @@ parse_node ParserGetNode(lexer_state *State, int StatementEnd) {
       parse_node Node = ParserGetCurls(State);
       Child = ParserExtractLastTokenFromChildren(&Node);
       ParserCreateStatmentBranches(&Node, ';');
-      for (int i = 0; i < Node.Children.size(); ++i) {
-        ParserCreateReturnBranches(&Node.Children[i]);
-        ParserCreateAssignmentBranches(&Node.Children[i]);
-      }
+      ParserCreatePrecedenceBranches(&Node);
       NodeParent.Children.push_back(Node);
       NodeParent.Children.push_back(Child);
 
