@@ -1,7 +1,6 @@
 
 #include "codegen_neo.h"
 
-#ifdef _3DS
 #include <sstream>
 namespace std {
 template <typename T> string to_string(T Value) {
@@ -10,7 +9,6 @@ template <typename T> string to_string(T Value) {
   return ss.str();
 }
 };
-#endif
 
 static std::string RegisterName(neocode_variable &Var, int UseRaw = 0) {
   if (Var.Name.size() && !UseRaw)
@@ -81,6 +79,26 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
       In.Type = neocode_instruction::INLINE;
       In.ExtraData = ASTNode->Children[0].Id;
       return In;
+    } else {
+      //      ast_node *Type = ASTNode->LookupType(ASTNode->Id);
+      if (true) {
+        // generate constant
+        neocode_variable Constant;
+        Constant.Type = ast_node::STRUCT;
+        Constant.RegisterType = 0;
+        Constant.Register = Function->Program->Registers.AllocConstant();
+        Constant.Name = std::string("Anonymous_") + ASTNode->Id + "_" +
+                        RegisterName(Constant, 1);
+        Constant.Const.Float.X = ASTNode->Children[0].FloatValue;
+        Constant.Const.Float.Y = ASTNode->Children[1].FloatValue;
+        Constant.Const.Float.Z = ASTNode->Children[2].FloatValue;
+        Constant.Const.Float.W = ASTNode->Children[3].FloatValue;
+        Function->Program->Globals.push_back(Constant);
+        neocode_instruction In;
+        In.Type = neocode_instruction::EMPTY;
+        In.Dst = Constant;
+        return In;
+      }
     }
   }
 
@@ -95,7 +113,8 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
   }
 
   if (ASTNode->Type == ast_node::ASSIGNMENT) {
-    if (ASTNode->Children[0].Children.size()) {
+    if (ASTNode->Children[0].Children.size() &&
+        Function->Instructions.back().Type != neocode_instruction::EMPTY) {
       Function->Instructions.back().Dst = *Function->GetVariable(ASTNode->Id);
       return neocode_instruction();
     } else {
@@ -110,6 +129,8 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
   if (ASTNode->Children[0].Children.size()) {
     Function->Program->Registers.Free(DependVar.Register);
   }
+
+  return neocode_instruction();
 }
 
 void CGNeoBuildStatement(neocode_function *Function, ast_node *ASTNode) {
@@ -128,21 +149,38 @@ neocode_function CGNeoBuildFunction(neocode_program *Program,
 
 neocode_program CGNeoBuildProgramInstance(ast_node *ASTNode) {
   neocode_program Program;
-  Program.Globals.push_back((neocode_variable){
-      "gl_Position", "vec4", ast_node::STRUCT, Program.Registers.AllocOutput(),
-      neocode_variable::OUTPUT_POSITION});
-  Program.Globals.push_back((neocode_variable){
-      "gl_FrontColor", "vec4", ast_node::STRUCT,
-      Program.Registers.AllocOutput(), neocode_variable::OUTPUT_COLOR});
   Program.Globals.push_back(
-      (neocode_variable){"gl_Vertex", "vec4", ast_node::STRUCT,
-                         Program.Registers.AllocVertex(), 0});
+      (neocode_variable){"gl_Position",
+                         "vec4",
+                         ast_node::STRUCT,
+                         Program.Registers.AllocOutput(),
+                         neocode_variable::OUTPUT_POSITION,
+                         {0}});
+  Program.Globals.push_back((neocode_variable){"gl_FrontColor",
+                                               "vec4",
+                                               ast_node::STRUCT,
+                                               Program.Registers.AllocOutput(),
+                                               neocode_variable::OUTPUT_COLOR,
+                                               {0}});
+  Program.Globals.push_back((neocode_variable){"gl_Vertex",
+                                               "vec4",
+                                               ast_node::STRUCT,
+                                               Program.Registers.AllocVertex(),
+                                               0,
+                                               {0}});
+  Program.Globals.push_back((neocode_variable){"gl_Color",
+                                               "vec4",
+                                               ast_node::STRUCT,
+                                               Program.Registers.AllocVertex(),
+                                               0,
+                                               {0}});
   Program.Globals.push_back(
-      (neocode_variable){"gl_Color", "vec4", ast_node::STRUCT,
-                         Program.Registers.AllocVertex(), 0});
-  Program.Globals.push_back((neocode_variable){
-      "gl_ModelViewProjectionMatrix", "vec4", ast_node::STRUCT,
-      Program.Registers.AllocConstant(), 0});
+      (neocode_variable){"gl_ModelViewProjectionMatrix",
+                         "vec4",
+                         ast_node::STRUCT,
+                         Program.Registers.AllocConstant(),
+                         0,
+                         {0}});
   for (ast_node &Node : ASTNode->Children) {
     if (Node.Type == ast_node::FUNCTION)
       Program.Functions.push_back(CGNeoBuildFunction(&Program, &Node));
@@ -201,8 +239,13 @@ void CGNeoGenerateCode(neocode_program *Program, std::ostream &os) {
     if (V.RegisterType > 0) {
       os << ".alias " << V.Name << " " << RegisterName(V, 1) << " as "
          << OutputName(V.RegisterType) << std::endl;
-    } else {
+    } else if (V.Register < 0x20) {
       os << ".alias " << V.Name << " " << RegisterName(V, 1) << std::endl;
+    } else {
+      neocode_constant Const = V.Const;
+      os << ".alias " << V.Name << " " << RegisterName(V, 1) << " as ("
+         << Const.Float.X << "," << Const.Float.Y << "," << Const.Float.Z << ","
+         << Const.Float.W << ")" << std::endl;
     }
   }
   for (neocode_function &Function : Program->Functions) {

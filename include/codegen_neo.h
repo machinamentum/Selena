@@ -69,6 +69,27 @@ struct neocode_register_file {
   }
 };
 
+struct neocode_constant {
+
+  enum {
+    FLOAT,
+    INT,
+    BOOLEAN,
+  };
+
+  int Type;
+
+  struct {
+    int X, Y, Z, W;
+  } Integer;
+
+  struct {
+    float X, Y, Z, W;
+  } Float;
+
+  int Bool;
+};
+
 struct neocode_variable {
 
   enum {
@@ -78,7 +99,8 @@ struct neocode_variable {
     OUTPUT_TEXCOORD0,
     OUTPUT_TEXCOORD1,
     OUTPUT_TEXCOORD2,
-    OUTPUT_VIEW
+    OUTPUT_VIEW,
+
   };
 
   std::string Name;
@@ -86,6 +108,7 @@ struct neocode_variable {
   int Type;
   int Register;
   int RegisterType;
+  neocode_constant Const;
 };
 
 struct neocode_instruction {
@@ -113,30 +136,7 @@ struct neocode_function {
   neocode_variable *GetVariable(std::string Name);
 };
 
-struct neocode_constant {
-
-  enum {
-    FLOAT,
-    INT,
-    BOOLEAN,
-  };
-
-  int Type;
-  int Register;
-
-  struct Integer {
-    int X, Y, Z, W;
-  };
-
-  struct Float {
-    float X, Y, Z, W;
-  };
-
-  int Bool;
-};
-
 struct neocode_program {
-  std::vector<neocode_constant> Constants;
   std::vector<neocode_function> Functions;
   std::vector<neocode_variable> Globals;
   neocode_register_file Registers;
