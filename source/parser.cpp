@@ -9,7 +9,7 @@ void ParserCreateStatmentBranches(parse_node *Node, int StatementEnd) {
   std::vector<parse_node> ChildrenClone =
       std::vector<parse_node>(Node->Children);
   Node->Children.clear();
-  for (int i = 0; i < ChildrenClone.size(); ++i) {
+  for (size_t i = 0; i < ChildrenClone.size(); ++i) {
     StatementNode.Children.push_back(ChildrenClone[i]);
     if (ChildrenClone[i].Token.Type == StatementEnd) {
       Node->Children.push_back(StatementNode);
@@ -50,7 +50,7 @@ void ParserCreateReturnBranches(parse_node *Node) {
       Node->Children.push_back(ChildrenClone[0]);
       parse_node SubNode;
       SubNode.Type = parse_node::E;
-      for (int i = 1; i < ChildrenClone.size(); ++i) {
+      for (size_t i = 1; i < ChildrenClone.size(); ++i) {
         SubNode.Children.push_back(ChildrenClone[i]);
       }
       Node->Children.push_back(SubNode);
@@ -59,20 +59,20 @@ void ParserCreateReturnBranches(parse_node *Node) {
 }
 
 void ParserCreateMultiplyBranches(parse_node *Node) {
-  for (int i = 0; i < Node->Children.size(); ++i) {
+  for (size_t i = 0; i < Node->Children.size(); ++i) {
     if (Node->Children[i].Token.Type == '*') {
       std::vector<parse_node> ChildrenClone =
           std::vector<parse_node>(Node->Children);
       Node->Children.clear();
       parse_node SubNode;
       SubNode.Type = parse_node::E;
-      for (int j = 0; j < i; ++j) {
+      for (size_t j = 0; j < i; ++j) {
         SubNode.Children.push_back(ChildrenClone[j]);
       }
       Node->Children.push_back(SubNode);
       Node->Children.push_back(ChildrenClone[i]);
       SubNode.Children.clear();
-      for (int j = i + 1; j < ChildrenClone.size(); ++j) {
+      for (size_t j = i + 1; j < ChildrenClone.size(); ++j) {
         SubNode.Children.push_back(ChildrenClone[j]);
       }
       Node->Children.push_back(SubNode);
@@ -81,20 +81,20 @@ void ParserCreateMultiplyBranches(parse_node *Node) {
 }
 
 void ParserCreateDivideBranches(parse_node *Node) {
-  for (int i = 0; i < Node->Children.size(); ++i) {
+  for (size_t i = 0; i < Node->Children.size(); ++i) {
     if (Node->Children[i].Token.Type == '/') {
       std::vector<parse_node> ChildrenClone =
           std::vector<parse_node>(Node->Children);
       Node->Children.clear();
       parse_node SubNode;
       SubNode.Type = parse_node::E;
-      for (int j = 0; j < i; ++j) {
+      for (size_t j = 0; j < i; ++j) {
         SubNode.Children.push_back(ChildrenClone[j]);
       }
       Node->Children.push_back(SubNode);
       Node->Children.push_back(ChildrenClone[i]);
       SubNode.Children.clear();
-      for (int j = i + 1; j < ChildrenClone.size(); ++j) {
+      for (size_t j = i + 1; j < ChildrenClone.size(); ++j) {
         SubNode.Children.push_back(ChildrenClone[j]);
       }
       Node->Children.push_back(SubNode);
@@ -103,20 +103,20 @@ void ParserCreateDivideBranches(parse_node *Node) {
 }
 
 void ParserCreateAssignmentBranches(parse_node *Node) {
-  for (int i = 0; i < Node->Children.size(); ++i) {
+  for (size_t i = 0; i < Node->Children.size(); ++i) {
     if (Node->Children[i].Token.Type == '=') {
       std::vector<parse_node> ChildrenClone =
           std::vector<parse_node>(Node->Children);
       Node->Children.clear();
       parse_node SubNode;
       SubNode.Type = parse_node::E;
-      for (int j = 0; j < i; ++j) {
+      for (size_t j = 0; j < i; ++j) {
         SubNode.Children.push_back(ChildrenClone[j]);
       }
       Node->Children.push_back(SubNode);
       Node->Children.push_back(ChildrenClone[i]);
       SubNode.Children.clear();
-      for (int j = i + 1; j < ChildrenClone.size(); ++j) {
+      for (size_t j = i + 1; j < ChildrenClone.size(); ++j) {
         SubNode.Children.push_back(ChildrenClone[j]);
       }
       Node->Children.push_back(SubNode);
@@ -142,7 +142,7 @@ void ParserCreateScopeBranches(parse_node *Node) {
       std::vector<parse_node>(Node->Children);
   Node->Children.clear();
   bool NewList = false;
-  for (int i = 0; i < ChildrenClone.size(); ++i) {
+  for (size_t i = 0; i < ChildrenClone.size(); ++i) {
     if (ChildrenClone[i].Type == parse_node::E) {
       if (!NewList) {
         Node->Children.push_back(ChildrenClone[i]);

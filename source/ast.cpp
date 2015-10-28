@@ -31,7 +31,7 @@ ast_node ast_node::BuildFunction(ast_node *Parent, parse_node *Node) {
   ast_node ASTNode = ast_node(Parent);
   ASTNode.Type = ast_node::FUNCTION;
   int ParamsIndex = -1;
-  for (int i = 1; i < Node->Children.size(); ++i) {
+  for (size_t i = 1; i < Node->Children.size(); ++i) {
     if (Node->Children[i].Token.Type == token::IDENTIFIER &&
         Node->Children[i + 1].Token.Type == '(') {
       ParamsIndex = i;
@@ -111,12 +111,12 @@ ast_node ast_node::BuildStruct(ast_node *Parent, parse_node *Node) {
   ASTNode.Type = ast_node::STRUCT;
   ASTNode.Id = Node->Children[1].Token.Id;
 
-  for (int i = 3; i < Node->Children.size(); ++i) {
+  for (size_t i = 3; i < Node->Children.size(); ++i) {
     ast_node ChildNode = BuildFromParseTree(&ASTNode, &Node->Children[i]);
     if (ChildNode.Type == ast_node::NONE && ChildNode.Children.size() == 0)
       continue;
 
-    for (int i = 0; i < ChildNode.Children.size(); ++i) {
+    for (size_t i = 0; i < ChildNode.Children.size(); ++i) {
       ASTNode.PushChild(ChildNode.Children[i]);
     }
   }
@@ -168,7 +168,7 @@ ast_node ast_node::BuildFromIdentifier(ast_node *ASTParent, parse_node *PNode) {
         BuildFromParseTree(&MultNode, &PNode->Children[2]).Children[0]);
     return MultNode;
   } else if (Type != ast_node::NONE) {
-    for (int i = 1; i < PNode->Children.size() - 1; ++i) {
+    for (size_t i = 1; i < PNode->Children.size() - 1; ++i) {
       if (PNode->Children[i].Token.Type == token::IDENTIFIER &&
           PNode->Children[i + 1].Token.Type == '(') {
         return BuildFunction(ASTParent, PNode);
@@ -183,7 +183,7 @@ ast_node ast_node::BuildFromIdentifier(ast_node *ASTParent, parse_node *PNode) {
     }
   } else {
     if (PNode->Children[0].Token.Id.compare("inline") == 0) {
-      for (int i = 1; i < PNode->Children.size() - 1; ++i) {
+      for (size_t i = 1; i < PNode->Children.size() - 1; ++i) {
         if (PNode->Children[i].Token.Type == token::IDENTIFIER &&
             PNode->Children[i + 1].Token.Type == '(') {
           return BuildFunction(ASTParent, PNode);
@@ -225,7 +225,7 @@ ast_node ast_node::BuildFromParseTree(ast_node *Parent, parse_node *PNode) {
               ChildNode.Children.size() == 0)
             continue;
 
-          for (int i = 0; i < ChildNode.Children.size(); ++i) {
+          for (size_t i = 0; i < ChildNode.Children.size(); ++i) {
             ASTNode.PushChild(ChildNode.Children[i]);
           }
 

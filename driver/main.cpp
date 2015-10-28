@@ -26,7 +26,7 @@ void PrintToken(token *Token) {
     break;
 
   case token::INT:
-    printf("%d\n", Token->IntValue);
+    printf("%ld\n", Token->IntValue);
     break;
 
   case token::IDENTIFIER:
@@ -57,7 +57,7 @@ void PrintParseTree(parse_node *Node, int Depth) {
   }
   if (Node->Type == parse_node::E) {
     printf("E%d\n", Depth);
-    for (int i = 0; i < Node->Children.size(); ++i) {
+    for (size_t i = 0; i < Node->Children.size(); ++i) {
       PrintParseTree(&Node->Children[i], Depth + 1);
     }
   } else {
@@ -71,16 +71,16 @@ void PrintAST(ast_node *AST, int Depth);
 void PrintASTNode(ast_node &Child, int Depth) {
   switch (Child.Type) {
   case ast_node::FUNCTION:
-    printf("function:%s:%d\n", Child.Id.c_str(), Child.Children.size());
+    printf("function:%s:%lu\n", Child.Id.c_str(), Child.Children.size());
     PrintAST(&Child, Depth + 1);
     break;
   case ast_node::FUNCTION_CALL:
-    printf("call:%s:%d\n", Child.Id.c_str(), Child.Children.size());
+    printf("call:%s:%lu\n", Child.Id.c_str(), Child.Children.size());
     PrintAST(&Child, Depth + 1);
     break;
 
   case ast_node::STRUCT:
-    printf("struct:%s:%d\n", Child.Id.c_str(), Child.Children.size());
+    printf("struct:%s:%lu\n", Child.Id.c_str(), Child.Children.size());
     PrintAST(&Child, Depth + 1);
     break;
 
@@ -120,7 +120,7 @@ void PrintASTNode(ast_node &Child, int Depth) {
       break;
 
     case ast_node::INT_LITERAL:
-      printf("int:%d\n", Child.IntValue);
+      printf("int:%ld\n", Child.IntValue);
       break;
 
     case ast_node::STRING_LITERAL:
@@ -132,7 +132,7 @@ void PrintASTNode(ast_node &Child, int Depth) {
       break;
 
     default:
-      printf("var:%d:%s\n", Child.VarType, Child.Id.c_str(), Child.FloatValue);
+      printf("var:%d:%s\n", Child.VarType, Child.Id.c_str());
       break;
     }
     break;

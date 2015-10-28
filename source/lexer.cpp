@@ -105,6 +105,8 @@ _CheckWhiteSpace:
     case '\\':
       return '\\';
     }
+
+    return Char;
   };
   if (Current[0] == '\"') {
     ReturnToken.Type = token::DQSTRING;

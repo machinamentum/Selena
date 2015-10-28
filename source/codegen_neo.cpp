@@ -72,6 +72,8 @@ neocode_variable *neocode_function::GetVariable(std::string Name) {
       return &V;
     }
   }
+
+  return nullptr;
 }
 
 neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
@@ -235,7 +237,7 @@ neocode_function CGNeoBuildFunction(neocode_program *Program,
                                     ast_node *ASTNode) {
   neocode_function Function = neocode_function(Program);
   Function.Name = ASTNode->Id;
-  for (int i = 0; i < ASTNode->Children.size(); ++i) {
+  for (size_t i = 0; i < ASTNode->Children.size(); ++i) {
     if (ASTNode->Children[i].Children.size()) {
       CGNeoBuildStatement(&Function, &ASTNode->Children[i].Children[0]);
     }
