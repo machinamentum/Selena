@@ -182,6 +182,7 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
     In.Src1 = CGNeoBuildInstruction(Function, &ASTNode->Children[0]).Dst;
     In.Src2 = CGNeoBuildInstruction(Function, &ASTNode->Children[1]).Dst;
     Function->Instructions.push_back(In);
+    Function->Program->Registers.Free(In.Dst.Register);
     return In;
   }
 
@@ -192,6 +193,7 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
                                 Function->Program->Registers.AllocTemp(), 0};
     In.Src1 = CGNeoBuildInstruction(Function, &ASTNode->Children[1]).Dst;
     Function->Instructions.push_back(In);
+    Function->Program->Registers.Free(In.Dst.Register);
     if (ASTNode->Children[0].VarType == ast_node::FLOAT_LITERAL &&
         ASTNode->Children[0].FloatValue != 1.0) {
       In.Type = neocode_instruction::MUL;
@@ -237,6 +239,7 @@ neocode_function CGNeoBuildFunction(neocode_program *Program,
       CGNeoBuildStatement(&Function, &ASTNode->Children[i].Children[0]);
     }
   }
+  Program->Registers.FreeAllTemp();
   return Function;
 }
 
