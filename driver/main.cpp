@@ -1,11 +1,12 @@
 #include <fstream>
 #include <iostream>
+#include <cstring>
 #include "parser.h"
 #include "ast.h"
 #include "codegen_neo.h"
 
 char *SlurpFile(const char *FilePath, long *FileSize) {
-  std::ifstream is = std::ifstream(FilePath);
+  std::ifstream is(FilePath);
   is.seekg(0, std::ios::end);
   long Length = is.tellg();
   is.seekg(0, std::ios::beg);

@@ -1,6 +1,7 @@
 
 #include "codegen_neo.h"
 #include "lexer.h"
+#include <cstring>
 
 #include <sstream>
 namespace std {
