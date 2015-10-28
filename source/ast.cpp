@@ -96,34 +96,13 @@ ast_node ast_node::BuildVariable(ast_node *Parent, parse_node *Node) {
 }
 
 ast_node ast_node::BuildStatement(ast_node *Parent, parse_node *Node) {
-  ast_node ASTNode = ast_node(Parent);
-  ASTNode.Type = ast_node::NONE;
-  int Type = ASTGetTypeFromString(Node->Children[0].Token.Id);
-  if (Type == ast_node::NONE) {
-    if (Node->Children[0].Token.Type == token::IDENTIFIER &&
-        Node->Children[1].Token.Type == '=') {
-      ast_node ASTTemp = ast_node(&ASTNode);
-      ASTTemp.Type = ast_node::ASSIGNMENT;
-      ASTTemp.Id = Node->Children[0].Token.Id;
-      ASTTemp.PushChild(
-          BuildFromParseTree(&ASTNode, &Node->Children[2]).Children[0]);
-      ASTNode.PushChild(ASTTemp);
-    } else {
-      ast_node ASTTemp = BuildFromIdentifier(&ASTNode, Node);
-      ASTNode.PushChild(ASTTemp);
-    }
-  } else {
-    ast_node ASTTemp = BuildFromIdentifier(&ASTNode, Node);
-    ASTNode.PushChild(ASTTemp);
-  }
-
-  return ASTNode;
+  return BuildFromParseTree(Parent, Node);
 }
 
 ast_node ast_node::BuildReturn(ast_node *Parent, parse_node *Node) {
   ast_node ASTNode = ast_node(Parent);
   ASTNode.Type = ast_node::RETURN;
-  ASTNode.PushChild(BuildStatement(&ASTNode, &Node->Children[1]));
+  ASTNode.PushChild(BuildFromParseTree(&ASTNode, &Node->Children[1]));
   return ASTNode;
 }
 
@@ -164,18 +143,29 @@ ast_node ast_node::BuildFromIdentifier(ast_node *ASTParent, parse_node *PNode) {
   token *Token = &Node->Token;
   std::string Id = Token->Id;
   int Type = ASTGetTypeFromString(Id);
-
-  if (PNode->Children[1].Token.Type == '*') {
+  if (PNode->Children[1].Token.Type == '=') {
+    ast_node MultNode = ast_node(ASTParent);
+    MultNode.Type = ast_node::ASSIGNMENT;
+    MultNode.PushChild(
+        BuildFromParseTree(&MultNode, &PNode->Children[0]).Children[0]);
+    MultNode.PushChild(
+        BuildFromParseTree(&MultNode, &PNode->Children[2]).Children[0]);
+    return MultNode;
+  } else if (PNode->Children[1].Token.Type == '*') {
     ast_node MultNode = ast_node(ASTParent);
     MultNode.Type = ast_node::MULTIPLY;
-    MultNode.Id = PNode->Children[0].Token.Id;
-    MultNode.PushChild(BuildFromIdentifier(&MultNode, &PNode->Children[2]));
+    MultNode.PushChild(
+        BuildFromParseTree(&MultNode, &PNode->Children[0]).Children[0]);
+    MultNode.PushChild(
+        BuildFromParseTree(&MultNode, &PNode->Children[2]).Children[0]);
     return MultNode;
   } else if (PNode->Children[1].Token.Type == '/') {
     ast_node MultNode = ast_node(ASTParent);
     MultNode.Type = ast_node::DIVIDE;
-    MultNode.Id = PNode->Children[0].Token.Id;
-    MultNode.PushChild(BuildVariable(&MultNode, &PNode->Children[2]));
+    MultNode.PushChild(
+        BuildFromParseTree(&MultNode, &PNode->Children[0]).Children[0]);
+    MultNode.PushChild(
+        BuildFromParseTree(&MultNode, &PNode->Children[2]).Children[0]);
     return MultNode;
   } else if (Type != ast_node::NONE) {
     for (int i = 1; i < PNode->Children.size() - 1; ++i) {
@@ -208,8 +198,7 @@ ast_node ast_node::BuildFromIdentifier(ast_node *ASTParent, parse_node *PNode) {
       StringNode.VarType = ast_node::STRING_LITERAL;
       StringNode.Id = Id;
       return StringNode;
-    } else if (Node->Token.Type == token::FLOAT ||
-               Node->Token.Type == token::INT) {
+    } else if (Token->Type == token::FLOAT || Token->Type == token::INT) {
       return BuildConstantPrimitive(ASTParent, Node);
     } else {
       return BuildVariable(ASTParent, PNode);
@@ -223,15 +212,22 @@ ast_node ast_node::BuildFromParseTree(ast_node *Parent, parse_node *PNode) {
   ASTNode.Type = ast_node::NONE;
   if (PNode->Type == parse_node::E) {
     for (parse_node &PN : PNode->Children) {
-      if (PN.Type == parse_node::E) {
-        ast_node ChildNode = BuildFromParseTree(&ASTNode, &PN);
-        if (ChildNode.Type == ast_node::NONE && ChildNode.Children.size() == 0)
-          continue;
+      if (PNode->Children.size() != 3) {
+        if (PN.Type == parse_node::E) {
+          ast_node ChildNode = BuildFromParseTree(&ASTNode, &PN);
+          if (ChildNode.Type == ast_node::NONE &&
+              ChildNode.Children.size() == 0)
+            continue;
 
-        for (int i = 0; i < ChildNode.Children.size(); ++i) {
-          ASTNode.PushChild(ChildNode.Children[i]);
+          for (int i = 0; i < ChildNode.Children.size(); ++i) {
+            ASTNode.PushChild(ChildNode.Children[i]);
+          }
+
+        } else {
+          ast_node ASTTemp = BuildFromIdentifier(&ASTNode, PNode);
+          ASTNode.PushChild(ASTTemp);
+          break;
         }
-
       } else {
         ast_node ASTTemp = BuildFromIdentifier(&ASTNode, PNode);
         ASTNode.PushChild(ASTTemp);

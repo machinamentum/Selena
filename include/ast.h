@@ -32,7 +32,7 @@ struct ast_node {
   enum { INLINE = 1, DECLARE = (1 << 1) };
 
   int Type;
-  int VarType;
+  int VarType = 0;
   int Modifiers;
   std::string Id;
   std::vector<ast_node> Children;

@@ -93,6 +93,7 @@ struct neocode_constant {
 struct neocode_variable {
 
   enum {
+    INPUT_UNIFORM = -1,
     OUTPUT_POSITION = 1,
     OUTPUT_QUATERNION,
     OUTPUT_COLOR,
