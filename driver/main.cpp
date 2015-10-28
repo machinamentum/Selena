@@ -24,6 +24,10 @@ void PrintToken(token *Token) {
     printf("%f\n", Token->FloatValue);
     break;
 
+  case token::INT:
+    printf("%d\n", Token->IntValue);
+    break;
+
   case token::IDENTIFIER:
     printf("%s\n", Token->Id.c_str());
     break;
@@ -102,7 +106,8 @@ void PrintASTNode(ast_node &Child, int Depth) {
   case ast_node::VARIABLE:
     switch (Child.VarType) {
     case ast_node::FLOAT:
-      printf("float:%s\n", Child.Id.c_str());
+      printf("float:%s:%s\n", Child.Id.c_str(),
+             (Child.Modifiers & ast_node::DECLARE) ? "true" : "false");
       break;
 
     case ast_node::INT:

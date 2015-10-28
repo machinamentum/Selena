@@ -65,9 +65,22 @@ _CheckWhiteSpace:
       [](char C) { return ((C >= '0') && (C <= '9')) || (C == '.'); };
 
   if (IsNumberOrDot(Current[0])) {
-    char *End;
-    ReturnToken.Type = token::FLOAT;
-    ReturnToken.FloatValue = strtod(Current, &End);
+    bool IsFloat = false;
+    char *End = Current;
+    while (IsNumberOrDot(*End) && (End < State->EndPtr)) {
+      if (*End == '.') {
+        IsFloat = true;
+        break;
+      }
+      ++End;
+    }
+    if (IsFloat) {
+      ReturnToken.Type = token::FLOAT;
+      ReturnToken.FloatValue = strtod(Current, &End);
+    } else {
+      ReturnToken.Type = token::INT;
+      ReturnToken.IntValue = strtoul(Current, &End, 10);
+    }
     ReturnToken.Line = State->LineCurrent;
     ReturnToken.Offset = State->OffsetCurrent;
     State->OffsetCurrent += End - Current;
