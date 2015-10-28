@@ -124,24 +124,32 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
   if (ASTNode->Type == ast_node::FUNCTION_CALL) {
     if (ASTNode->Id.compare("asm") == 0) {
       lexer_state LexerState;
+      std::vector<neocode_variable> CachedVars;
+      auto GetNextFromTokenSpecifier =
+          [&LexerState, &Function, &ASTNode, &CachedVars]() {
+            token Token = LexerGetToken(&LexerState);
+            if (Token.Type == ',')
+              Token = LexerGetToken(&LexerState);
 
-      auto GetNextFromTokenSpecifier = [&LexerState, &Function, &ASTNode]() {
-        token Token = LexerGetToken(&LexerState);
-        if (Token.Type == ',')
-          Token = LexerGetToken(&LexerState);
+            if (Token.Type == '@') {
+              Token = LexerGetToken(&LexerState);
+              if (Token.IntValue == 0)
+                return neocode_variable();
+              if (Token.IntValue > CachedVars.size()) {
+                CachedVars.resize(Token.IntValue);
+                CachedVars[Token.IntValue - 1] =
+                    CGNeoBuildInstruction(Function,
+                                          &ASTNode->Children[Token.IntValue])
+                        .Dst;
+              }
+              return CachedVars[Token.IntValue - 1];
+            }
+            if (Token.Type == token::END) {
+              return neocode_variable();
+            }
 
-        if (Token.Type == '@') {
-          Token = LexerGetToken(&LexerState);
-          return CGNeoBuildInstruction(Function,
-                                       &ASTNode->Children[Token.IntValue])
-              .Dst;
-        }
-        if (Token.Type == token::END) {
-          return neocode_variable();
-        }
-
-        return *Function->GetVariable(Token.Id);
-      };
+            return *Function->GetVariable(Token.Id);
+          };
 
       char *Source = (char *)ASTNode->Children[0].Id.c_str();
       LexerInit(&LexerState, Source, Source + strlen(Source) + 1);
