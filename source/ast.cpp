@@ -212,7 +212,13 @@ ast_node ast_node::BuildFromParseTree(ast_node *Parent, parse_node *PNode) {
   ASTNode.Type = ast_node::NONE;
   if (PNode->Type == parse_node::E) {
     for (parse_node &PN : PNode->Children) {
-      if (PNode->Children.size() != 3) {
+      if (PNode->Children.size() == 3 &&
+          PNode->Children[1].Type == parse_node::T) {
+        ast_node ASTTemp = BuildFromIdentifier(&ASTNode, PNode);
+        ASTNode.PushChild(ASTTemp);
+        break;
+      } else {
+
         if (PN.Type == parse_node::E) {
           ast_node ChildNode = BuildFromParseTree(&ASTNode, &PN);
           if (ChildNode.Type == ast_node::NONE &&
@@ -228,10 +234,6 @@ ast_node ast_node::BuildFromParseTree(ast_node *Parent, parse_node *PNode) {
           ASTNode.PushChild(ASTTemp);
           break;
         }
-      } else {
-        ast_node ASTTemp = BuildFromIdentifier(&ASTNode, PNode);
-        ASTNode.PushChild(ASTTemp);
-        break;
       }
     }
   } else {
