@@ -114,7 +114,7 @@ struct neocode_variable {
 
 struct neocode_instruction {
 
-  enum { EMPTY, INLINE, MOV, MUL };
+  enum { EMPTY, INLINE, MOV, MUL, RSQ, RCP, NOP, END };
 
   int Type;
   neocode_variable Dst;
