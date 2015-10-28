@@ -90,7 +90,12 @@ void PrintASTNode(ast_node &Child, int Depth) {
     break;
 
   case ast_node::MULTIPLY:
-    printf("%s *\n", Child.Id.c_str());
+    printf("Mul *\n");
+    PrintAST(&Child, Depth + 1);
+    break;
+
+  case ast_node::DIVIDE:
+    printf("Div /\n");
     PrintAST(&Child, Depth + 1);
     break;
 
@@ -121,7 +126,7 @@ void PrintASTNode(ast_node &Child, int Depth) {
       break;
 
     default:
-      printf("var:%s\n", Child.Id.c_str());
+      printf("var:%d:%s\n", Child.VarType, Child.Id.c_str(), Child.FloatValue);
       break;
     }
     break;
