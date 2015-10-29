@@ -133,7 +133,7 @@ ast_node ast_node::BuildConstantPrimitive(ast_node *Parent, parse_node *Node) {
     ASTNode.FloatValue = Node->Token.FloatValue;
   } else if (Node->Token.Type == token::INT) {
     ASTNode.VarType = ast_node::INT_LITERAL;
-    ASTNode.FloatValue = Node->Token.IntValue;
+    ASTNode.IntValue = Node->Token.IntValue;
   }
   return ASTNode;
 }
