@@ -4,6 +4,7 @@
 #include "parser.h"
 #include "ast.h"
 #include "codegen_neo.h"
+#include "preprocessor.h"
 
 char *SlurpFile(const char *FilePath, long *FileSize) {
   std::ifstream is(FilePath);
@@ -43,6 +44,10 @@ void PrintToken(token *Token) {
 
   case token::SQSTRING:
     printf("\"%s\"\n", Token->Id.c_str());
+    break;
+
+  case token::CPPSTRING:
+    printf("CPP: %s\n", Token->Id.c_str());
     break;
 
   default:
@@ -179,6 +184,14 @@ int main(int argc, char **argv) {
   char *Source = SlurpFile(InputFilePath, &Size);
   LexerInit(&Lexer, Source, Source + Size);
   parse_node RootNode = ParserGetNode(&Lexer, token::END);
+  if (PrintTrees)
+    PrintParseTree(&RootNode, 0);
+
+  cpp_table CppTable;
+  CppDefineInt(&CppTable, "__FILE__", 1);
+  CppDefineInt(&CppTable, "GL_ES", 1);
+  CppDefineInt(&CppTable, "__VERSION__", 100);
+  CppResolveMacros(&CppTable, &RootNode);
   if (PrintTrees)
     PrintParseTree(&RootNode, 0);
   ast_node ASTRoot = ast_node::BuildFromParseTree(nullptr, &RootNode);

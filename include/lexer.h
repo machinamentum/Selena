@@ -20,7 +20,8 @@ struct token {
     PLUSEQ,
     MINUSEQ,
     SHIFTLEFT,
-    LESSEQ
+    LESSEQ,
+    CPPSTRING,
   };
 
   int Type;
