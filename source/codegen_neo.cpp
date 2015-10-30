@@ -233,7 +233,11 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
     In.Type = neocode_instruction::MOV;
     In.Dst = CGNeoBuildInstruction(Function, &ASTNode->Children[0]).Dst;
     In.Src1 = CGNeoBuildInstruction(Function, &ASTNode->Children[1]).Dst;
-    Function->Instructions.push_back(In);
+    if (Function->Instructions.back().Type != neocode_instruction::EMPTY) {
+      Function->Instructions.back().Dst = In.Dst;
+    } else {
+      Function->Instructions.push_back(In);
+    }
     return In;
   }
 
@@ -243,7 +247,11 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
     In.Dst = ReturnReg;
     In.Src1 =
         CGNeoBuildInstruction(Function, &ASTNode->Children[0].Children[0]).Dst;
-    Function->Instructions.push_back(In);
+    if (Function->Instructions.back().Type != neocode_instruction::EMPTY) {
+      Function->Instructions.back().Dst = ReturnReg;
+    } else {
+      Function->Instructions.push_back(In);
+    }
     return In;
   }
 
