@@ -150,12 +150,12 @@ void PrintASTNode(ast_node &Child, int Depth) {
 }
 
 void PrintAST(ast_node *AST, int Depth) {
-  for (ast_node Child : AST->Children) {
+  for (auto Child : AST->Children) {
     for (int i = 0; i < Depth; ++i) {
       printf("  ");
     }
     printf("D%d ", Depth);
-    PrintASTNode(Child, Depth);
+    PrintASTNode(*Child, Depth);
   }
 }
 
@@ -194,10 +194,10 @@ int main(int argc, char **argv) {
   CppResolveMacros(&CppTable, &RootNode);
   if (PrintTrees)
     PrintParseTree(&RootNode, 0);
-  ast_node ASTRoot = ast_node::BuildFromParseTree(nullptr, &RootNode);
+  ast_node *ASTRoot = ast_node::BuildFromParseTree(nullptr, &RootNode);
   if (PrintTrees)
-    PrintAST(&ASTRoot, 0);
-  neocode_program Program = CGNeoBuildProgramInstance(&ASTRoot);
+    PrintAST(ASTRoot, 0);
+  neocode_program Program = CGNeoBuildProgramInstance(ASTRoot);
   if (OutputFilePath) {
     std::ofstream Fs;
     Fs.open(OutputFilePath);
