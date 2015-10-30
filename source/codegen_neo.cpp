@@ -139,8 +139,11 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
 
             if (Token.Type == '@') {
               Token = LexerGetToken(&LexerState);
-              if (Token.IntValue == 0)
-                return neocode_variable();
+              if (Token.IntValue == 0) {
+                return (neocode_variable){
+                    "", "", ast_node::STRUCT,
+                    Function->Program->Registers.AllocTemp(), 0};
+              }
               if (Token.IntValue > CachedVars.size()) {
                 CachedVars.resize(Token.IntValue);
                 CachedVars[Token.IntValue - 1] =
@@ -166,6 +169,10 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
       In.Src1 = GetNextFromTokenSpecifier();
       In.Src2 = GetNextFromTokenSpecifier();
       Function->Instructions.push_back(In);
+      int DstReg = In.Dst.Register;
+      if (DstReg >= 0x10 && DstReg < 0x20) {
+        Function->Program->Registers.Free(DstReg);
+      }
       return In;
     } else {
       //      ast_node *Type = ASTNode->LookupType(ASTNode->Id);
