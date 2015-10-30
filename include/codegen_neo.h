@@ -149,6 +149,8 @@ struct neocode_program {
   neocode_register_file Registers;
 };
 
+neocode_function CGNeoBuildFunction(neocode_program *Program,
+                                    ast_node *ASTNode);
 neocode_program CGNeoBuildProgramInstance(ast_node *ASTNode);
 void CGNeoGenerateCode(neocode_program *Program, std::ostream &os);
 

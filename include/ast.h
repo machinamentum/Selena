@@ -31,15 +31,15 @@ struct ast_node {
 
   enum { INLINE = 1, DECLARE = (1 << 1) };
 
-  int Type;
+  int Type = 0;
   int VarType = 0;
-  int Modifiers;
+  int Modifiers = 0;
   std::string Id;
   std::vector<ast_node *> Children;
   float FloatValue;
   long IntValue;
   std::string Typename;
-  ast_node *Parent;
+  ast_node *Parent = nullptr;
 
   ast_node(ast_node *ASTParent) : Parent(ASTParent) {}
 
@@ -49,6 +49,7 @@ struct ast_node {
   }
 
   ast_node *LookupType(std::string Typename);
+  ast_node *LookupFunction(std::string FuncName);
 
   static ast_node *BuildFunction(ast_node *Parent, parse_node *Node);
   static ast_node *BuildFromIdentifier(ast_node *Parent, parse_node *PNode);

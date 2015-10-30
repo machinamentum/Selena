@@ -13,6 +13,18 @@ ast_node *ast_node::LookupType(std::string Typename) {
   return nullptr;
 }
 
+ast_node *ast_node::LookupFunction(std::string FuncName) {
+  for (auto Func : Children) {
+    if (Func->Type == ast_node::FUNCTION && Func->Id.compare(FuncName) == 0) {
+      return Func;
+    }
+  }
+
+  if (Parent)
+    return Parent->LookupFunction(FuncName);
+  return nullptr;
+}
+
 int ASTGetTypeFromString(std::string Typename) {
   if (Typename.compare("struct") == 0)
     return ast_node::STRUCT;
