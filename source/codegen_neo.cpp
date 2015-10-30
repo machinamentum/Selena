@@ -33,6 +33,12 @@ static int GetInstructionFromIdentifier(std::string Name) {
   if (Name.compare("end") == 0) {
     return neocode_instruction::END;
   }
+  if (Name.compare("exp") == 0) {
+    return neocode_instruction::EX2;
+  }
+  if (Name.compare("log") == 0) {
+    return neocode_instruction::LG2;
+  }
   return neocode_instruction::EMPTY;
 }
 
@@ -337,6 +343,18 @@ void CGNeoGenerateInstruction(neocode_instruction *Instruction,
   case neocode_instruction::END:
     os << " "
        << "end" << std::endl;
+    break;
+
+  case neocode_instruction::EX2:
+    os << " "
+       << "exp " << RegisterName(Instruction->Dst) << ", "
+       << RegisterName(Instruction->Src1) << std::endl;
+    break;
+
+  case neocode_instruction::LG2:
+    os << " "
+       << "log " << RegisterName(Instruction->Dst) << ", "
+       << RegisterName(Instruction->Src1) << std::endl;
     break;
 
   default:
