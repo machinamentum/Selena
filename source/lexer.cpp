@@ -8,6 +8,28 @@ void LexerInit(lexer_state *State, char *Source, char *End) {
   State->OffsetCurrent = 0;
 }
 
+token LexerPeekToken(lexer_state *State) {
+  lexer_state TempState = *State;
+  return LexerGetToken(&TempState);
+}
+
+std::string LexerGetLine(lexer_state *State, int Line) {
+  char *Current = State->SourcePtr;
+  int CurLine = 0;
+  while (CurLine < (Line - 1) && (Current < State->EndPtr)) {
+    if (Current[0] == '\n') {
+      ++CurLine;
+    }
+    ++Current;
+  }
+  char *End = Current;
+  while (*End != '\n' && End < State->EndPtr) {
+    ++End;
+  }
+
+  return std::string(Current, End - Current);
+}
+
 token LexerGetToken(lexer_state *State) {
   token ReturnToken;
 

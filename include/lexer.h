@@ -42,6 +42,8 @@ struct lexer_state {
 };
 
 void LexerInit(lexer_state *State, char *Source, char *End);
+token LexerPeekToken(lexer_state *State);
 token LexerGetToken(lexer_state *State);
+std::string LexerGetLine(lexer_state *State, int Line);
 
 #endif
