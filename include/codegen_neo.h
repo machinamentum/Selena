@@ -116,6 +116,7 @@ struct neocode_variable {
   int Register;
   int RegisterType;
   neocode_constant Const;
+  int Swizzle;
 };
 
 struct neocode_instruction {
@@ -126,7 +127,6 @@ struct neocode_instruction {
   neocode_variable Dst;
   neocode_variable Src1;
   neocode_variable Src2;
-  int Swizzle;
   std::string ExtraData;
 };
 

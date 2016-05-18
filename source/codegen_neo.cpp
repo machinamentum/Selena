@@ -42,6 +42,28 @@ static int GetInstructionFromIdentifier(std::string Name) {
   return neocode_instruction::EMPTY;
 }
 
+static int GetSwizzleFromIdentifier(std::string Id) {
+  int Swizzle = 0;
+  for (int i = 0; i < 4 && i < Id.length(); ++i) {
+    switch (Id[i]) {
+    case 'x':
+      Swizzle |= (1 << (i * 4));
+      continue;
+    case 'y':
+      Swizzle |= (2 << (i * 4));
+      continue;
+    case 'z':
+      Swizzle |= (3 << (i * 4));
+      continue;
+    case 'w':
+      Swizzle |= (4 << (i * 4));
+      continue;
+    }
+  }
+}
+
+static std::string GetSwizzleAsString(int Swizzle) {}
+
 static std::string RegisterName(neocode_variable &Var, int UseRaw = 0) {
   if (Var.Name.size() && !UseRaw)
     return Var.Name;
@@ -438,38 +460,30 @@ static std::string OutputName(int Register) {
   return ONames[Register - 1];
 }
 
+static void WriteVarible(neocode_variable &V, std::ostream &os) {
+  if (V.RegisterType > 0) {
+    os << ".alias " << V.Name << " " << RegisterName(V, 1) << " as "
+       << OutputName(V.RegisterType) << std::endl;
+  } else if (V.Register < 0x20) {
+    os << ".alias " << V.Name << " " << RegisterName(V, 1) << std::endl;
+  } else if (V.RegisterType == 0) {
+    neocode_constant Const = V.Const;
+    os << ".alias " << V.Name << " " << RegisterName(V, 1) << " as ("
+       << Const.Float.X << "," << Const.Float.Y << "," << Const.Float.Z << ","
+       << Const.Float.W << ")" << std::endl;
+  } else {
+    os << ".alias " << V.Name << " " << RegisterName(V, 1) << std::endl;
+  }
+}
+
 void CGNeoGenerateCode(neocode_program *Program, std::ostream &os) {
   os << ".alias CaelinaCCVersion c95 as (0.0, 0.0, 0.0, 0.1)" << std::endl;
   for (neocode_variable &V : Program->Globals) {
-    if (V.RegisterType > 0) {
-      os << ".alias " << V.Name << " " << RegisterName(V, 1) << " as "
-         << OutputName(V.RegisterType) << std::endl;
-    } else if (V.Register < 0x20) {
-      os << ".alias " << V.Name << " " << RegisterName(V, 1) << std::endl;
-    } else if (V.RegisterType == 0) {
-      neocode_constant Const = V.Const;
-      os << ".alias " << V.Name << " " << RegisterName(V, 1) << " as ("
-         << Const.Float.X << "," << Const.Float.Y << "," << Const.Float.Z << ","
-         << Const.Float.W << ")" << std::endl;
-    } else {
-      os << ".alias " << V.Name << " " << RegisterName(V, 1) << std::endl;
-    }
+    WriteVarible(V, os);
   }
   for (neocode_function &Function : Program->Functions) {
     for (neocode_variable &V : Function.Variables) {
-      if (V.RegisterType > 0) {
-        os << ".alias " << V.Name << " " << RegisterName(V, 1) << " as "
-           << OutputName(V.RegisterType) << std::endl;
-      } else if (V.Register < 0x20) {
-        os << ".alias " << V.Name << " " << RegisterName(V, 1) << std::endl;
-      } else if (V.RegisterType == 0) {
-        neocode_constant Const = V.Const;
-        os << ".alias " << V.Name << " " << RegisterName(V, 1) << " as ("
-           << Const.Float.X << "," << Const.Float.Y << "," << Const.Float.Z
-           << "," << Const.Float.W << ")" << std::endl;
-      } else {
-        os << ".alias " << V.Name << " " << RegisterName(V, 1) << std::endl;
-      }
+      WriteVarible(V, os);
     }
     CGNeoGenerateFunction(&Function, os);
   }
