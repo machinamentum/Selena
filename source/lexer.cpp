@@ -1,11 +1,20 @@
 #include "lexer.h"
 #include <cstdlib>
 
-void LexerInit(lexer_state *State, char *Source, char *End) {
+token lexer_state::GetToken() {
+    return LexerGetToken(this);
+}
+
+token lexer_state::PeekToken() {
+    return LexerPeekToken(this);
+}
+
+void LexerInit(lexer_state *State, char *Source, char *End, symtable *T) {
   State->SourcePtr = State->CurrentPtr = Source;
   State->EndPtr = End - 1;
   State->LineCurrent = 1;
   State->OffsetCurrent = 0;
+  State->Table = T;
 }
 
 token LexerPeekToken(lexer_state *State) {
@@ -59,20 +68,20 @@ _CheckWhiteSpace:
       goto _CheckWhiteSpace;
     }
   }
-
-  if (Current[0] == '#' && (Current < State->EndPtr)) {
-    char *End = Current;
-    while (*End != '\n' && (End < State->EndPtr)) {
-      ++End;
-    }
-    ReturnToken.Id = std::string(Current, End - Current);
-    ReturnToken.Type = token::CPPSTRING;
-    ReturnToken.Line = State->LineCurrent;
-    ReturnToken.Offset = State->OffsetCurrent;
-    State->OffsetCurrent += End - Current;
-    Current = End;
-    goto _Exit;
-  }
+  // TODO preprocessor
+  // if (Current[0] == '#' && (Current < State->EndPtr)) {
+  //   char *End = Current;
+  //   while (*End != '\n' && (End < State->EndPtr)) {
+  //     ++End;
+  //   }
+  //   ReturnToken.Id = std::string(Current, End - Current);
+  //   ReturnToken.Type = token::CPPSTRING;
+  //   ReturnToken.Line = State->LineCurrent;
+  //   ReturnToken.Offset = State->OffsetCurrent;
+  //   State->OffsetCurrent += End - Current;
+  //   Current = End;
+  //   goto _Exit;
+  // }
 
   static auto IsAsciiLetter = [](char C) {
     return (C == '_') || ((C >= 'A') && (C <= 'Z')) ||
@@ -88,10 +97,19 @@ _CheckWhiteSpace:
     while (IsAsciiLetterOrNumber(*End) && (End < State->EndPtr)) {
       ++End;
     }
-    ReturnToken.Id = std::string(Current, End - Current);
-    ReturnToken.Type = token::IDENTIFIER;
+    std::string TheID = std::string(Current, End - Current);
+    symtable_entry *Entry = State->Table->Lookup(TheID);
+    if (!Entry) Entry = State->Table->Insert(TheID, token::IDENTIFIER);
+    ReturnToken.Id = Entry->Name;
+    ReturnToken.Type = Entry->Type;
     ReturnToken.Line = State->LineCurrent;
     ReturnToken.Offset = State->OffsetCurrent;
+    if (Entry->Type == token::BOOLCONSTANT) {
+        if (strcmp(Entry->Name.c_str(), "true") == 0)
+            ReturnToken.BoolValue = 1;
+        if (strcmp(Entry->Name.c_str(), "false") == 0)
+            ReturnToken.BoolValue = 0;
+    }
     State->OffsetCurrent += End - Current;
     Current = End;
     goto _Exit;
@@ -111,10 +129,10 @@ _CheckWhiteSpace:
       ++End;
     }
     if (IsFloat) {
-      ReturnToken.Type = token::FLOAT;
+      ReturnToken.Type = token::FLOATCONSTANT;
       ReturnToken.FloatValue = strtod(Current, &End);
     } else {
-      ReturnToken.Type = token::INT;
+      ReturnToken.Type = token::INTCONSTANT;
       ReturnToken.IntValue = strtoul(Current, &End, 10);
     }
     ReturnToken.Line = State->LineCurrent;
@@ -172,7 +190,7 @@ _CheckWhiteSpace:
   }
 
   if (Current[0] == '\'') {
-    ReturnToken.Type = token::DQSTRING;
+    ReturnToken.Type = token::SQSTRING;
 
     char *End = Current + 1;
     while ((*End != '\'') && (End < State->EndPtr)) {
@@ -203,10 +221,10 @@ _CheckWhiteSpace:
   case '<': {
     if (Current < State->EndPtr) {
       if (Current[1] == '<') {
-        ReturnToken.Type = token::SHIFTLEFT;
+        ReturnToken.Type = token::LEFT_ASSIGN;
         ++State->OffsetCurrent;
       } else if (Current[1] == '=') {
-        ReturnToken.Type = token::LESSEQ;
+        ReturnToken.Type = token::LE_OP;
         ++State->OffsetCurrent;
       }
     }

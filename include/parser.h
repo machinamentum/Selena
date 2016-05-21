@@ -2,8 +2,8 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include <vector>
 #include "lexer.h"
+#include <vector>
 
 struct parse_node {
 
@@ -14,8 +14,13 @@ struct parse_node {
   int Type;
 };
 
-parse_node ParserGetNode(lexer_state *State, int StatementEnd);
-parse_node ParserGetCurls(lexer_state *State);
-parse_node ParserGetParens(lexer_state *State);
+struct parser {
+  lexer_state &Lex;
+  symtable *SymbolTable;
+
+  parser(lexer_state &L);
+  parse_node Parse();
+};
+
 
 #endif

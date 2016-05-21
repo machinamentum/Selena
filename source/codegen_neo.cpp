@@ -183,7 +183,8 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
           };
 
       char *Source = (char *)ASTNode->Children[0]->Id.c_str();
-      LexerInit(&LexerState, Source, Source + strlen(Source) + 1);
+      symtable SymTable;
+      LexerInit(&LexerState, Source, Source + strlen(Source) + 1, &SymTable);
       token Token = LexerGetToken(&LexerState);
       neocode_instruction In;
       In.Type = GetInstructionFromIdentifier(Token.Id);

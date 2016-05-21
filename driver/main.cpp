@@ -46,9 +46,9 @@ void PrintToken(token *Token) {
     printf("\"%s\"\n", Token->Id.c_str());
     break;
 
-  case token::CPPSTRING:
-    printf("CPP: %s\n", Token->Id.c_str());
-    break;
+  // case token::CPPSTRING:
+  //   printf("CPP: %s\n", Token->Id.c_str());
+  //   break;
 
   default:
     printf("%c\n", Token->Type);
@@ -182,16 +182,18 @@ int main(int argc, char **argv) {
     return -1;
   }
   char *Source = SlurpFile(InputFilePath, &Size);
-  LexerInit(&Lexer, Source, Source + Size);
-  parse_node RootNode = ParserGetNode(&Lexer, token::END);
+  symtable SymbolTable;
+  LexerInit(&Lexer, Source, Source + Size, &SymbolTable);
+  parser Parser = parser(Lexer);
+  parse_node RootNode = Parser.Parse();
   if (PrintTrees)
     PrintParseTree(&RootNode, 0);
 
-  cpp_table CppTable;
-  CppDefineInt(&CppTable, "__FILE__", 1);
-  CppDefineInt(&CppTable, "GL_ES", 1);
-  CppDefineInt(&CppTable, "__VERSION__", 100);
-  CppResolveMacros(&CppTable, &RootNode);
+  // cpp_table CppTable;
+  // CppDefineInt(&CppTable, "__FILE__", 1);
+  // CppDefineInt(&CppTable, "GL_ES", 1);
+  // CppDefineInt(&CppTable, "__VERSION__", 100);
+  // CppResolveMacros(&CppTable, &RootNode);
   if (PrintTrees)
     PrintParseTree(&RootNode, 0);
   ast_node *ASTRoot = ast_node::BuildFromParseTree(nullptr, &RootNode);
