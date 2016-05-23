@@ -153,34 +153,34 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
     if (ASTNode->Id.compare("asm") == 0) {
       lexer_state LexerState;
       std::vector<neocode_variable> CachedVars;
-      auto GetNextFromTokenSpecifier =
-          [&LexerState, &Function, &ASTNode, &CachedVars]() {
-            token Token = LexerGetToken(&LexerState);
-            if (Token.Type == ',')
-              Token = LexerGetToken(&LexerState);
+      auto GetNextFromTokenSpecifier = [&LexerState, &Function, &ASTNode,
+                                        &CachedVars]() {
+        token Token = LexerGetToken(&LexerState);
+        if (Token.Type == ',')
+          Token = LexerGetToken(&LexerState);
 
-            if (Token.Type == '@') {
-              Token = LexerGetToken(&LexerState);
-              if (Token.IntValue == 0) {
-                return (neocode_variable){
-                    "", "", ast_node::STRUCT,
-                    Function->Program->Registers.AllocTemp(), 0};
-              }
-              if (Token.IntValue > CachedVars.size()) {
-                CachedVars.resize(Token.IntValue);
-                CachedVars[Token.IntValue - 1] =
-                    CGNeoBuildInstruction(Function,
-                                          ASTNode->Children[Token.IntValue])
-                        .Dst;
-              }
-              return CachedVars[Token.IntValue - 1];
-            }
-            if (Token.Type == token::END) {
-              return neocode_variable();
-            }
+        if (Token.Type == '@') {
+          Token = LexerGetToken(&LexerState);
+          if (Token.IntValue == 0) {
+            return (neocode_variable){"", "", ast_node::STRUCT,
+                                      Function->Program->Registers.AllocTemp(),
+                                      0};
+          }
+          if (Token.IntValue > CachedVars.size()) {
+            CachedVars.resize(Token.IntValue);
+            CachedVars[Token.IntValue - 1] =
+                CGNeoBuildInstruction(Function,
+                                      ASTNode->Children[Token.IntValue])
+                    .Dst;
+          }
+          return CachedVars[Token.IntValue - 1];
+        }
+        if (Token.Type == token::END) {
+          return neocode_variable();
+        }
 
-            return *Function->GetVariable(Token.Id);
-          };
+        return *Function->GetVariable(Token.Id);
+      };
 
       char *Source = (char *)ASTNode->Children[0]->Id.c_str();
       symtable SymTable;
@@ -287,8 +287,8 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
     In.Type = neocode_instruction::MOV;
     In.Dst = CGNeoBuildInstruction(Function, ASTNode->Children[0]).Dst;
     In.Src1 = CGNeoBuildInstruction(Function, ASTNode->Children[1]).Dst;
-    if (Function->Instructions.back().Type != neocode_instruction::EMPTY
-        && Function->Instructions.back().Type != neocode_instruction::MOV) {
+    if (Function->Instructions.back().Type != neocode_instruction::EMPTY &&
+        Function->Instructions.back().Type != neocode_instruction::MOV) {
       Function->Instructions.back().Dst = In.Dst;
     } else {
       Function->Instructions.push_back(In);

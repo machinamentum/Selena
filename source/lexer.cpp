@@ -1,13 +1,9 @@
 #include "lexer.h"
 #include <cstdlib>
 
-token lexer_state::GetToken() {
-    return LexerGetToken(this);
-}
+token lexer_state::GetToken() { return LexerGetToken(this); }
 
-token lexer_state::PeekToken() {
-    return LexerPeekToken(this);
-}
+token lexer_state::PeekToken() { return LexerPeekToken(this); }
 
 void LexerInit(lexer_state *State, char *Source, char *End, symtable *T) {
   State->SourcePtr = State->CurrentPtr = Source;
@@ -99,25 +95,27 @@ _CheckWhiteSpace:
     }
     std::string TheID = std::string(Current, End - Current);
     symtable_entry *Entry = State->Table->Lookup(TheID);
-    if (Entry->Type == 0) Entry = State->Table->Insert(TheID, token::IDENTIFIER);
+    if (Entry->Type == 0)
+      Entry = State->Table->Insert(TheID, token::IDENTIFIER);
     ReturnToken.Id = Entry->Name;
     ReturnToken.Type = Entry->Type;
     printf("ID %d %s\n", Entry->Type, Entry->Name.c_str());
     ReturnToken.Line = State->LineCurrent;
     ReturnToken.Offset = State->OffsetCurrent;
     if (Entry->Type == token::BOOLCONSTANT) {
-        if (strcmp(Entry->Name.c_str(), "true") == 0)
-            ReturnToken.BoolValue = 1;
-        if (strcmp(Entry->Name.c_str(), "false") == 0)
-            ReturnToken.BoolValue = 0;
+      if (strcmp(Entry->Name.c_str(), "true") == 0)
+        ReturnToken.BoolValue = 1;
+      if (strcmp(Entry->Name.c_str(), "false") == 0)
+        ReturnToken.BoolValue = 0;
     }
     State->OffsetCurrent += End - Current;
     Current = End;
     goto _Exit;
   }
 
-  static auto IsNumberOrDot =
-      [](char C) { return ((C >= '0') && (C <= '9')) || (C == '.'); };
+  static auto IsNumberOrDot = [](char C) {
+    return ((C >= '0') && (C <= '9')) || (C == '.');
+  };
 
   if (IsNumberOrDot(Current[0])) {
     bool IsFloat = false;
@@ -219,42 +217,42 @@ _CheckWhiteSpace:
   }
 
   switch (Current[0]) {
-      case '<': {
-        if (Current < State->EndPtr) {
-          if (Current[1] == '<') {
-            ReturnToken.Type = token::LEFT_ASSIGN;
-            ++State->OffsetCurrent;
-          } else if (Current[1] == '=') {
-            ReturnToken.Type = token::LE_OP;
-            ++State->OffsetCurrent;
-          }
-        }
-        goto _BuildToken;
-      }
-
-      case '|': {
-          if (Current < State->EndPtr) {
-            if (Current[1] == '|') {
-              printf("OR TEST %c%c\n", Current[0], Current[1]);
-              ReturnToken.Type = token::OR_OP;
-              ++State->OffsetCurrent;
-              ++Current;
-            } else if (Current[1] == '=') {
-              ReturnToken.Type = token::OR_ASSIGN;
-              ++State->OffsetCurrent;
-            }
-            goto _BuildToken;
-        }
-    }
-
-      default:
-        ReturnToken.Type = Current[0];
-      _BuildToken:
-        ReturnToken.Line = State->LineCurrent;
-        ReturnToken.Offset = State->OffsetCurrent;
+  case '<': {
+    if (Current < State->EndPtr) {
+      if (Current[1] == '<') {
+        ReturnToken.Type = token::LEFT_ASSIGN;
         ++State->OffsetCurrent;
+      } else if (Current[1] == '=') {
+        ReturnToken.Type = token::LE_OP;
+        ++State->OffsetCurrent;
+      }
+    }
+    goto _BuildToken;
+  }
 
-        printf("TOK %d:%c\n", ReturnToken.Type, ReturnToken.Type);
+  case '|': {
+    if (Current < State->EndPtr) {
+      if (Current[1] == '|') {
+        printf("OR TEST %c%c\n", Current[0], Current[1]);
+        ReturnToken.Type = token::OR_OP;
+        ++State->OffsetCurrent;
+        ++Current;
+      } else if (Current[1] == '=') {
+        ReturnToken.Type = token::OR_ASSIGN;
+        ++State->OffsetCurrent;
+      }
+      goto _BuildToken;
+    }
+  }
+
+  default:
+    ReturnToken.Type = Current[0];
+  _BuildToken:
+    ReturnToken.Line = State->LineCurrent;
+    ReturnToken.Offset = State->OffsetCurrent;
+    ++State->OffsetCurrent;
+
+    printf("TOK %d:%c\n", ReturnToken.Type, ReturnToken.Type);
   }
 
   ++Current;

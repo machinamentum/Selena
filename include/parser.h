@@ -3,7 +3,6 @@
 #define PARSER_H
 
 #include "lexer.h"
-#include <vector>
 
 struct parse_node {
 
@@ -13,9 +12,7 @@ struct parse_node {
   token Token;
   int Type;
 
-  parse_node() {
-      Type = E;
-  }
+  parse_node() { Type = E; }
 
   parse_node(int Tok) {
     Type = T;
@@ -31,9 +28,7 @@ struct parse_node {
     Children.insert(Children.end(), P.Children.begin(), P.Children.end());
   }
 
-  bool Empty() {
-      return Children.size() == 0 && Type == E;
-  }
+  bool Empty() { return Children.size() == 0 && Type == E; }
 };
 
 struct parser {
@@ -62,7 +57,8 @@ struct parser {
   parse_node ParsePostfixExpression();
   parse_node ParsePrimaryExpression();
   parse_node ParseUnaryExpression();
-  parse_node ParseOperatorExpression(ParseFuncPtr R, std::vector<int> TokenTypes);
+  parse_node ParseOperatorExpression(ParseFuncPtr R,
+                                     std::vector<int> TokenTypes);
   parse_node ParseEqualityExpression();
   parse_node ParseMultiplicativeExpression();
   parse_node ParseAdditiveExpression();
@@ -87,6 +83,5 @@ struct parser {
 
   parse_node Parse();
 };
-
 
 #endif

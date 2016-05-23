@@ -3,8 +3,6 @@
 #define AST_H
 
 #include "parser.h"
-#include <vector>
-#include <string>
 
 struct ast_node {
 

@@ -2,8 +2,6 @@
 #ifndef LEXER_H
 #define LEXER_H
 
-#include <string>
-
 #include "symbol.h"
 
 struct token {
@@ -11,7 +9,7 @@ struct token {
   enum {
     LEFT_PAREN = '(',
     RIGHT_PAREN = ')',
-    LEFT_BRACKET ='[',
+    LEFT_BRACKET = '[',
     RIGHT_BRACKET = ']',
     LEFT_BRACE = '{',
     RIGHT_BRACE = '}',

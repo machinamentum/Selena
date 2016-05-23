@@ -1,10 +1,10 @@
-#include <fstream>
-#include <iostream>
-#include <cstring>
-#include "parser.h"
 #include "ast.h"
 #include "codegen_neo.h"
+#include "parser.h"
 #include "preprocessor.h"
+#include <cstring>
+#include <fstream>
+#include <iostream>
 
 char *SlurpFile(const char *FilePath, long *FileSize) {
   std::ifstream is(FilePath);
@@ -50,9 +50,9 @@ void PrintToken(token *Token) {
     printf("void\n");
     break;
 
-    case token::OR_OP:
-        printf("||\n");
-        break;
+  case token::OR_OP:
+    printf("||\n");
+    break;
 
   // case token::CPPSTRING:
   //   printf("CPP: %s\n", Token->Id.c_str());

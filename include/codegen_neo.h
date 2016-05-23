@@ -3,9 +3,6 @@
 #define CODEGEN_NEO_H
 
 #include "ast.h"
-#include <string>
-#include <vector>
-#include <ostream>
 
 struct neocode_register_file {
   int Vertex[8];
@@ -76,7 +73,6 @@ struct neocode_register_file {
 };
 
 struct neocode_constant {
-
   enum {
     FLOAT,
     INT,
@@ -97,7 +93,6 @@ struct neocode_constant {
 };
 
 struct neocode_variable {
-
   enum {
     INPUT_UNIFORM = -1,
     OUTPUT_POSITION = 1,
@@ -120,7 +115,6 @@ struct neocode_variable {
 };
 
 struct neocode_instruction {
-
   enum { EMPTY, INLINE, MOV, MUL, RSQ, RCP, NOP, END, EX2, LG2 };
 
   int Type;
