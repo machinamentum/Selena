@@ -13,7 +13,7 @@ int symtable::GetIndex(std::string Name) {
 
 symtable_entry *symtable::Insert(std::string Name, int Type) {
     if (GetIndex(Name) == 0) {
-        symbols.push_back({Name, Type});
+        symbols.push_back((symtable_entry){Name, Type});
     }
 
     return Lookup(Name);

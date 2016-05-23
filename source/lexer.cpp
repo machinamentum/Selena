@@ -99,9 +99,10 @@ _CheckWhiteSpace:
     }
     std::string TheID = std::string(Current, End - Current);
     symtable_entry *Entry = State->Table->Lookup(TheID);
-    if (!Entry) Entry = State->Table->Insert(TheID, token::IDENTIFIER);
+    if (Entry->Type == 0) Entry = State->Table->Insert(TheID, token::IDENTIFIER);
     ReturnToken.Id = Entry->Name;
     ReturnToken.Type = Entry->Type;
+    printf("ID %d %s\n", Entry->Type, Entry->Name.c_str());
     ReturnToken.Line = State->LineCurrent;
     ReturnToken.Offset = State->OffsetCurrent;
     if (Entry->Type == token::BOOLCONSTANT) {
@@ -218,25 +219,42 @@ _CheckWhiteSpace:
   }
 
   switch (Current[0]) {
-  case '<': {
-    if (Current < State->EndPtr) {
-      if (Current[1] == '<') {
-        ReturnToken.Type = token::LEFT_ASSIGN;
-        ++State->OffsetCurrent;
-      } else if (Current[1] == '=') {
-        ReturnToken.Type = token::LE_OP;
-        ++State->OffsetCurrent;
+      case '<': {
+        if (Current < State->EndPtr) {
+          if (Current[1] == '<') {
+            ReturnToken.Type = token::LEFT_ASSIGN;
+            ++State->OffsetCurrent;
+          } else if (Current[1] == '=') {
+            ReturnToken.Type = token::LE_OP;
+            ++State->OffsetCurrent;
+          }
+        }
+        goto _BuildToken;
       }
-    }
-    goto _BuildToken;
-  }
 
-  default:
-  _BuildToken:
-    ReturnToken.Line = State->LineCurrent;
-    ReturnToken.Offset = State->OffsetCurrent;
-    ++State->OffsetCurrent;
-    ReturnToken.Type = Current[0];
+      case '|': {
+          if (Current < State->EndPtr) {
+            if (Current[1] == '|') {
+              printf("OR TEST %c%c\n", Current[0], Current[1]);
+              ReturnToken.Type = token::OR_OP;
+              ++State->OffsetCurrent;
+              ++Current;
+            } else if (Current[1] == '=') {
+              ReturnToken.Type = token::OR_ASSIGN;
+              ++State->OffsetCurrent;
+            }
+            goto _BuildToken;
+        }
+    }
+
+      default:
+        ReturnToken.Type = Current[0];
+      _BuildToken:
+        ReturnToken.Line = State->LineCurrent;
+        ReturnToken.Offset = State->OffsetCurrent;
+        ++State->OffsetCurrent;
+
+        printf("TOK %d:%c\n", ReturnToken.Type, ReturnToken.Type);
   }
 
   ++Current;

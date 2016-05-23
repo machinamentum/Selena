@@ -22,11 +22,11 @@ char *SlurpFile(const char *FilePath, long *FileSize) {
 
 void PrintToken(token *Token) {
   switch (Token->Type) {
-  case token::FLOAT:
+  case token::FLOATCONSTANT:
     printf("%f\n", Token->FloatValue);
     break;
 
-  case token::INT:
+  case token::INTCONSTANT:
     printf("%ld\n", Token->IntValue);
     break;
 
@@ -45,6 +45,14 @@ void PrintToken(token *Token) {
   case token::SQSTRING:
     printf("\"%s\"\n", Token->Id.c_str());
     break;
+
+  case token::VOID:
+    printf("void\n");
+    break;
+
+    case token::OR_OP:
+        printf("||\n");
+        break;
 
   // case token::CPPSTRING:
   //   printf("CPP: %s\n", Token->Id.c_str());
@@ -194,8 +202,8 @@ int main(int argc, char **argv) {
   // CppDefineInt(&CppTable, "GL_ES", 1);
   // CppDefineInt(&CppTable, "__VERSION__", 100);
   // CppResolveMacros(&CppTable, &RootNode);
-  if (PrintTrees)
-    PrintParseTree(&RootNode, 0);
+  // if (PrintTrees)
+  //   PrintParseTree(&RootNode, 0);
   ast_node *ASTRoot = ast_node::BuildFromParseTree(nullptr, &RootNode);
   if (PrintTrees)
     PrintAST(ASTRoot, 0);

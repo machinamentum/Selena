@@ -287,7 +287,8 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
     In.Type = neocode_instruction::MOV;
     In.Dst = CGNeoBuildInstruction(Function, ASTNode->Children[0]).Dst;
     In.Src1 = CGNeoBuildInstruction(Function, ASTNode->Children[1]).Dst;
-    if (Function->Instructions.back().Type != neocode_instruction::EMPTY) {
+    if (Function->Instructions.back().Type != neocode_instruction::EMPTY
+        && Function->Instructions.back().Type != neocode_instruction::MOV) {
       Function->Instructions.back().Dst = In.Dst;
     } else {
       Function->Instructions.push_back(In);
