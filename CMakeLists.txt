@@ -15,6 +15,6 @@ file(GLOB driver_SRC
 
 add_library(selena ${scc_SRC})
 
-add_executable(caelinacc ${driver_SRC})
-target_link_libraries(caelinacc selena)
+add_executable(selenacc ${driver_SRC})
+target_link_libraries(selenacc selena)
 target_include_directories (selena PUBLIC include)
