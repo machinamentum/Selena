@@ -14,11 +14,6 @@ struct parse_node {
 
   parse_node() { Type = E; }
 
-  parse_node(int Tok) {
-    Type = T;
-    Token.Type = Tok;
-  }
-
   parse_node(token &Tok) {
     Token = Tok;
     Type = T;
@@ -42,6 +37,8 @@ struct parser {
   void Match(int T);
 
   static bool IsAssignmentOp(int T);
+  static bool IsTypeQualifier(int T);
+  static bool IsPrecisionQualifier(int T);
 
   parse_node ParseTypeSpecifier();
   parse_node ParseFullySpecifiedType();
@@ -81,7 +78,21 @@ struct parser {
   parse_node ParseStatementList();
   parse_node ParseCompoundStatementNoNewScope();
 
-  parse_node Parse();
+  parse_node ParseTypeQualifier();
+  parse_node ParseConstantExpression();
+  parse_node ParseStructDeclarator();
+  parse_node ParseStructDeclaratorList();
+  parse_node ParseStructDeclaration();
+  parse_node ParseStructDeclarationList();
+  parse_node ParseStructSpecifier();
+  parse_node ParseInitializer();
+  parse_node ParsePrecisionQualifier();
+  parse_node ParseTypeSpecifierNoPrecision();
+  parse_node ParseInitDeclaratorList();
+  parse_node ParseSingleDeclaration();
+  parse_node ParseDeclaration();
+  parse_node ParseExternalDeclaration();
+  parse_node ParseTranslationUnit();
 };
 
 #endif

@@ -20,7 +20,13 @@ char *SlurpFile(const char *FilePath, long *FileSize) {
   return Buffer;
 }
 
+static symtable SymbolTable;
+
 void PrintToken(token *Token) {
+  if (Token->Type >= token::ATTRIBUTE && Token->Type <= token::WHILE) {
+    printf("%s\n", Token->Id.c_str());
+    return;
+  }
   switch (Token->Type) {
   case token::FLOATCONSTANT:
     printf("%f\n", Token->FloatValue);
@@ -44,10 +50,6 @@ void PrintToken(token *Token) {
 
   case token::SQSTRING:
     printf("\"%s\"\n", Token->Id.c_str());
-    break;
-
-  case token::VOID:
-    printf("void\n");
     break;
 
   case token::OR_OP:
@@ -190,10 +192,9 @@ int main(int argc, char **argv) {
     return -1;
   }
   char *Source = SlurpFile(InputFilePath, &Size);
-  symtable SymbolTable;
   LexerInit(&Lexer, Source, Source + Size, &SymbolTable);
   parser Parser = parser(Lexer);
-  parse_node RootNode = Parser.Parse();
+  parse_node RootNode = Parser.ParseTranslationUnit();
   if (PrintTrees)
     PrintParseTree(&RootNode, 0);
 
