@@ -118,7 +118,6 @@ bool parser::IsTypeQualifier(int T) {
   case token::UNIFORM:
     return true;
   }
-
   return false;
 }
 
@@ -132,24 +131,74 @@ bool parser::IsPrecisionQualifier(int T) {
   return false;
 }
 
+bool parser::IsIterationToken(int T) {
+  switch (T) {
+  case token::WHILE:
+  case token::DO:
+  case token::FOR:
+    return true;
+  }
+  return false;
+}
+
+bool parser::IsJumpToken(int T) {
+  switch (T) {
+  case token::CONTINUE:
+  case token::BREAK:
+  case token::RETURN:
+  case token::DISCARD:
+    return true;
+  }
+  return false;
+}
+
+bool parser::IsTypeSpecifier(int T) {
+  switch (T) {
+  case token::VOID:
+  case token::FLOAT:
+  case token::INT:
+  case token::BOOL:
+  case token::VEC2:
+  case token::VEC3:
+  case token::VEC4:
+  case token::BVEC2:
+  case token::BVEC3:
+  case token::BVEC4:
+  case token::IVEC2:
+  case token::IVEC3:
+  case token::IVEC4:
+  case token::MAT2:
+  case token::MAT3:
+  case token::MAT4:
+  case token::SAMPLER2D:
+  case token::SAMPLERCUBE:
+  case token::TYPE_NAME:
+  case token::STRUCT:
+    return true;
+  }
+  return false;
+}
+
 parse_node parser::ParseAssignmentOperator() {
   switch (Token.Type) {
   case token::EQUAL:
   case token::MUL_ASSIGN:
   case token::DIV_ASSIGN:
   case token::ADD_ASSIGN:
-  case token::SUB_ASSIGN:
+  case token::SUB_ASSIGN: {
+    parse_node N = parse_node(Token);
+    Match(Token.Type);
+    return N;
+  }
 
   case token::MOD_ASSIGN:
   case token::LEFT_ASSIGN:
   case token::RIGHT_ASSIGN:
   case token::AND_ASSIGN:
   case token::XOR_ASSIGN:
-  case token::OR_ASSIGN: {
-    parse_node N = parse_node(Token);
-    Match(Token.Type);
-    return N;
-  }
+  case token::OR_ASSIGN:
+    error("Use of reserved operator", Token);
+    return parse_node();
 
   default:
     error("Unexpected token", Token);
@@ -490,8 +539,127 @@ parse_node parser::ParseExpressionStatement() {
   return N;
 }
 
+parse_node parser::ParseStatementWithScope() {
+  if (Token.Type == token::LEFT_BRACE) {
+    return ParseCompoundStatementNoNewScope();
+  }
+  return ParseSimpleStatement();
+}
+
+parse_node parser::ParseDeclarationStatement() { return ParseDeclaration(); }
+
+parse_node parser::ParseCondition() {
+  if (IsTypeQualifier(Token.Type) || IsTypeSpecifier(Token.Type)) {
+    parse_node N;
+    N.Children.push_back(ParseFullySpecifiedType());
+    N.Children.push_back(parse_node(Token));
+    Match(token::IDENTIFIER);
+    N.Children.push_back(parse_node(Token));
+    Match(token::EQUAL);
+    N.Children.push_back(ParseInitializer());
+    return N;
+  }
+  return ParseExpression();
+}
+
+parse_node parser::ParseIterationStatement() {
+  parse_node N;
+  if (Token.Type == token::WHILE) {
+    N.Children.push_back(parse_node(Token));
+    Match(token::WHILE);
+    N.Children.push_back(parse_node(Token));
+    Match(token::LEFT_PAREN);
+    N.Children.push_back(ParseCondition());
+    N.Children.push_back(parse_node(Token));
+    Match(token::RIGHT_PAREN);
+    N.Children.push_back(ParseStatementNoNewScope());
+  } else if (Token.Type == token::DO) {
+    N.Children.push_back(parse_node(Token));
+    Match(token::DO);
+    N.Children.push_back(ParseStatementWithScope());
+    N.Children.push_back(parse_node(Token));
+    Match(token::WHILE);
+    N.Children.push_back(parse_node(Token));
+    Match(token::LEFT_PAREN);
+    N.Children.push_back(ParseExpression());
+    N.Children.push_back(parse_node(Token));
+    Match(token::RIGHT_PAREN);
+    N.Children.push_back(parse_node(Token));
+    Match(token::SEMICOLON);
+  } else if (Token.Type == token::FOR) {
+    N.Children.push_back(parse_node(Token));
+    Match(token::FOR);
+    N.Children.push_back(parse_node(Token));
+    Match(token::LEFT_PAREN);
+
+    if (IsTypeQualifier(Token.Type) || IsTypeSpecifier(Token.Type) ||
+        Token.Type == token::PRECISION) {
+      N.Children.push_back(ParseDeclarationStatement());
+    } else {
+      N.Children.push_back(ParseExpressionStatement());
+    }
+
+    if (Token.Type != token::SEMICOLON) {
+      N.Children.push_back(ParseCondition());
+    }
+    N.Children.push_back(parse_node(Token));
+    Match(token::SEMICOLON);
+    if (Token.Type != token::RIGHT_PAREN) {
+      N.Children.push_back(ParseExpression());
+    }
+    N.Children.push_back(parse_node(Token));
+    Match(token::RIGHT_PAREN);
+    N.Children.push_back(ParseStatementNoNewScope());
+  }
+  return N;
+}
+
+parse_node parser::ParseSelectionStatement() {
+  parse_node N;
+  N.Children.push_back(parse_node(Token));
+  Match(token::IF);
+  N.Children.push_back(parse_node(Token));
+  Match(token::LEFT_PAREN);
+  N.Children.push_back(ParseExpression());
+  N.Children.push_back(parse_node(Token));
+  Match(token::RIGHT_PAREN);
+  N.Children.push_back(ParseStatementWithScope());
+  if (Token.Type == token::ELSE) {
+    N.Children.push_back(parse_node(Token));
+    Match(token::ELSE);
+    N.Children.push_back(ParseStatementWithScope());
+  }
+  return N;
+}
+
+parse_node parser::ParseJumpStatement() {
+  parse_node N;
+  if (!IsJumpToken(Token.Type)) {
+    error("Expected jump token", Token);
+    return parse_node();
+  }
+  int T = Token.Type;
+  N.Children.push_back(parse_node(Token));
+  Match(T);
+  if (T == token::RETURN) {
+    N.Children.push_back(ParseExpression());
+  }
+  N.Children.push_back(parse_node(Token));
+  Match(token::SEMICOLON);
+  return N;
+}
+
 parse_node parser::ParseSimpleStatement() {
-  // TODO other simple statements
+  if (Token.Type == token::IF) {
+    return ParseSelectionStatement();
+  } else if (IsIterationToken(Token.Type)) {
+    return ParseIterationStatement();
+  } else if (IsJumpToken(Token.Type)) {
+    return ParseJumpStatement();
+  } else if (IsTypeQualifier(Token.Type) || IsTypeSpecifier(Token.Type) ||
+             Token.Type == token::PRECISION) {
+    return ParseDeclarationStatement();
+  }
   return ParseExpressionStatement();
 }
 

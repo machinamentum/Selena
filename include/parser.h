@@ -39,6 +39,9 @@ struct parser {
   static bool IsAssignmentOp(int T);
   static bool IsTypeQualifier(int T);
   static bool IsPrecisionQualifier(int T);
+  static bool IsIterationToken(int T);
+  static bool IsJumpToken(int T);
+  static bool IsTypeSpecifier(int T);
 
   parse_node ParseTypeSpecifier();
   parse_node ParseFullySpecifiedType();
@@ -78,6 +81,12 @@ struct parser {
   parse_node ParseStatementList();
   parse_node ParseCompoundStatementNoNewScope();
 
+  parse_node ParseCondition();
+  parse_node ParseStatementWithScope();
+  parse_node ParseSelectionStatement();
+  parse_node ParseIterationStatement();
+  parse_node ParseJumpStatement();
+  parse_node ParseDeclarationStatement();
   parse_node ParseTypeQualifier();
   parse_node ParseConstantExpression();
   parse_node ParseStructDeclarator();

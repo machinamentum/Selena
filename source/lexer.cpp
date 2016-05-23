@@ -99,7 +99,6 @@ _CheckWhiteSpace:
       Entry = State->Table->Insert(TheID, token::IDENTIFIER);
     ReturnToken.Id = Entry->Name;
     ReturnToken.Type = Entry->Type;
-    printf("ID %d %s\n", Entry->Type, Entry->Name.c_str());
     ReturnToken.Line = State->LineCurrent;
     ReturnToken.Offset = State->OffsetCurrent;
     if (Entry->Type == token::BOOLCONSTANT) {
@@ -233,7 +232,6 @@ _CheckWhiteSpace:
   case '|': {
     if (Current < State->EndPtr) {
       if (Current[1] == '|') {
-        printf("OR TEST %c%c\n", Current[0], Current[1]);
         ReturnToken.Type = token::OR_OP;
         ++State->OffsetCurrent;
         ++Current;
@@ -251,8 +249,6 @@ _CheckWhiteSpace:
     ReturnToken.Line = State->LineCurrent;
     ReturnToken.Offset = State->OffsetCurrent;
     ++State->OffsetCurrent;
-
-    printf("TOK %d:%c\n", ReturnToken.Type, ReturnToken.Type);
   }
 
   ++Current;
