@@ -23,6 +23,16 @@ symtable_entry *symtable::Lookup(std::string Name) {
   return &symbols[GetIndex(Name)];
 }
 
+symtable_entry *symtable::FindFirstOfType(int T) {
+  for (int i = 0; i < symbols.size(); ++i) {
+    if (symbols[i].Type == T) {
+      return &symbols[i];
+    }
+  }
+
+  return &symbols[0];
+}
+
 symtable::symtable() {
   symbols.reserve(256);
   Insert("", 0);

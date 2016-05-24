@@ -45,6 +45,8 @@ struct parser {
   static bool IsConstructorIdentifier(int T);
   static bool IsParameterQualifier(int T);
 
+  void GenError(const std::string &S, const token &T);
+
   parse_node ParseTypeSpecifier();
   parse_node ParseFullySpecifiedType();
   parse_node ParseParameterDeclaration();

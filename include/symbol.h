@@ -16,6 +16,7 @@ struct symtable {
   int GetIndex(std::string Name);
   symtable_entry *Insert(std::string Name, int Type);
   symtable_entry *Lookup(std::string Name);
+  symtable_entry *FindFirstOfType(int T);
 
   symtable();
 };

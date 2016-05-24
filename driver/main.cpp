@@ -8,6 +8,7 @@
 
 char *SlurpFile(const char *FilePath, long *FileSize) {
   std::ifstream is(FilePath);
+  if (!is) return nullptr;
   is.seekg(0, std::ios::end);
   long Length = is.tellg();
   is.seekg(0, std::ios::beg);
@@ -175,18 +176,30 @@ void PrintAST(ast_node *AST, int Depth) {
   }
 }
 
+static void PrintHelp(const std::string &ExecName) {
+  printf("Usage: %s <input_shader> [options]\n", ExecName.c_str());
+  printf("Options:\n");
+  printf("     -o <output>       | Select output file\n");
+  printf("     -h,--help         | Show this help message\n");
+  printf("     --verbose         | Print parse and syntax tree structures\n");
+
+}
+
 int main(int argc, char **argv) {
   bool PrintTrees = false;
   char *InputFilePath = nullptr;
   char *OutputFilePath = nullptr;
   for (int i = 1; i < argc; ++i) {
-    if (strcmp(argv[i], "--verbose") == 0) {
+    if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+      PrintHelp(argv[0]);
+      return 0;
+    } else if (strcmp(argv[i], "--verbose") == 0) {
       PrintTrees = true;
+    } else if (strcmp(argv[i], "-o") == 0) {
+      OutputFilePath = argv[++i];
     } else {
       if (!InputFilePath) {
         InputFilePath = argv[i];
-      } else {
-        OutputFilePath = argv[i];
       }
     }
   }
@@ -194,10 +207,14 @@ int main(int argc, char **argv) {
   lexer_state Lexer;
   long Size;
   if (!InputFilePath) {
-    printf("Error: no input file\n");
+    printf("error: no input file\n");
     return -1;
   }
   char *Source = SlurpFile(InputFilePath, &Size);
+  if (!Source) {
+    printf("error: no such file or directory: \'%s\'\n", InputFilePath);
+    return -1;
+  }
   LexerInit(&Lexer, Source, Source + Size, &SymbolTable);
   parser Parser = parser(Lexer);
   parse_node RootNode = Parser.ParseTranslationUnit();
@@ -219,8 +236,6 @@ int main(int argc, char **argv) {
     std::ofstream Fs;
     Fs.open(OutputFilePath);
     CGNeoGenerateCode(&Program, Fs);
-  } else {
-    CGNeoGenerateCode(&Program, std::cout);
   }
   return 0;
 }

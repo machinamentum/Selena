@@ -119,7 +119,85 @@ struct token {
   std::string Id;
   int Line;
   int Offset;
+
+  friend std::string TokenToString(const token &T) {
+    if (T.Type < END) return std::string(1, (char)T.Type);
+    if (T.Type >= ATTRIBUTE && T.Type <= FLOATCONSTANT) return T.Id;
+    if (T.Type == FLOATCONSTANT) return std::to_string(T.FloatValue);
+    if (T.Type == INTCONSTANT) return std::to_string(T.IntValue);
+    if (T.Type == BOOLCONSTANT) return T.BoolValue ? "true" : "flase";
+    if (T.Type == FIELD_SELECTION) return T.Id;
+    if (T.Type >= INVARIANT && T.Type <= PRECISION) return T.Id;
+    if (T.Type == DQSTRING) return "\"" + T.Id + "\"";
+    if (T.Type == SQSTRING) return "\'" + T.Id + "\'";
+    if (T.Type >= ASM) return T.Id;
+    switch (T.Type) {
+      case LEFT_OP: return "<<";
+      case RIGHT_OP: return ">>";
+      case INC_OP: return "++";
+      case DEC_OP: return "--";
+      case LE_OP: return "<=";
+      case GE_OP: return ">=";
+      case EQ_OP: return "==";
+      case NE_OP: return "!=";
+      case AND_OP: return "&&";
+      case OR_OP: return "||";
+      case XOR_OP: return "^^";
+      case MUL_ASSIGN: return "*=";
+      case DIV_ASSIGN: return "/=";
+      case ADD_ASSIGN: return "+=";
+      case MOD_ASSIGN: return "%%=";
+      case LEFT_ASSIGN: return "<<=";
+      case RIGHT_ASSIGN: return ">>=";
+      case AND_ASSIGN: return "&=";
+      case XOR_ASSIGN: return "^=";
+      case OR_ASSIGN: return "|=";
+      case SUB_ASSIGN: return "-=";
+    }
+    return "";
+  }
+
+  friend std::string TokenToString(const int &Type) {
+    symtable S;
+    if (Type < END) return std::string(1, (char)Type);
+    if (Type == TYPE_NAME) return "type name";
+    if (Type >= ATTRIBUTE && Type < FLOATCONSTANT) return S.FindFirstOfType(Type)->Name;
+    if (Type == FLOATCONSTANT) return "float value";
+    if (Type == INTCONSTANT) return "int value";
+    if (Type == BOOLCONSTANT) return "bool value";
+    if (Type == FIELD_SELECTION) return "field selector";
+    if (Type >= INVARIANT && Type <= PRECISION) return S.FindFirstOfType(Type)->Name;
+    if (Type == DQSTRING) return "constant string";
+    if (Type == SQSTRING) return "constant string";
+    if (Type >= ASM) return S.FindFirstOfType(Type)->Name;
+    switch (Type) {
+      case LEFT_OP: return "<<";
+      case RIGHT_OP: return ">>";
+      case INC_OP: return "++";
+      case DEC_OP: return "--";
+      case LE_OP: return "<=";
+      case GE_OP: return ">=";
+      case EQ_OP: return "==";
+      case NE_OP: return "!=";
+      case AND_OP: return "&&";
+      case OR_OP: return "||";
+      case XOR_OP: return "^^";
+      case MUL_ASSIGN: return "*=";
+      case DIV_ASSIGN: return "/=";
+      case ADD_ASSIGN: return "+=";
+      case MOD_ASSIGN: return "%%=";
+      case LEFT_ASSIGN: return "<<=";
+      case RIGHT_ASSIGN: return ">>=";
+      case AND_ASSIGN: return "&=";
+      case XOR_ASSIGN: return "^=";
+      case OR_ASSIGN: return "|=";
+      case SUB_ASSIGN: return "-=";
+    }
+    return "";
+  }
 };
+
+std::string TokenToString(const int &Type);
 
 struct lexer_state {
   char *SourcePtr;

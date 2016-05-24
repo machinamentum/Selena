@@ -2,11 +2,11 @@
 #include <cstdlib>
 #include <functional>
 
-void PrintToken(token *Token);
-static void error(const char *S, token &T) {
-  printf("Error:%d:%d: %s\n", T.Line, T.Offset, S);
-  PrintToken(&T);
-  exit(-1);
+void parser::GenError(const std::string &S, const token &T) {
+  std::string Line = LexerGetLine(&Lex, T.Line);
+  // TODO driver-defined error callback
+  printf(("error:%d:%d: %s\n" + Line + "\n").c_str(), T.Line, T.Offset,
+         S.c_str());
 }
 
 parser::parser(lexer_state &L) : Lex(L) { SymbolTable = Lex.Table; }
@@ -15,11 +15,9 @@ void parser::Match(int T) {
   if (T == Token.Type) {
     Token = Lex.GetToken();
   } else {
-    printf("Expected %d:%c\n", T, T);
-    token N = Lex.PeekToken();
-    printf("Next token ");
-    PrintToken(&N);
-    error("Unexpected token", Token);
+    GenError("Expected " + TokenToString(T) + " before token " +
+                 TokenToString(Token),
+             Token);
   }
 }
 
@@ -43,7 +41,8 @@ parse_node parser::ParseTypeQualifier() {
     N.Children.push_back(parse_node(Token));
     Match(Token.Type);
   } else {
-    error("Expected type qualifier", Token);
+    GenError("Expected type qualifier before token " + TokenToString(Token),
+             Token);
   }
 
   return N;
@@ -110,7 +109,7 @@ parse_node parser::ParseParameterDeclaration() {
         Match(token::RIGHT_BRACKET);
       }
     } else {
-      error("Unexpected tokenw", Token);
+      GenError("Unexpected token", Token);
     }
   }
 
@@ -268,6 +267,14 @@ bool parser::IsParameterQualifier(int T) {
 
 parse_node parser::ParseAssignmentOperator() {
   switch (Token.Type) {
+  case token::MOD_ASSIGN:
+  case token::LEFT_ASSIGN:
+  case token::RIGHT_ASSIGN:
+  case token::AND_ASSIGN:
+  case token::XOR_ASSIGN:
+  case token::OR_ASSIGN:
+    GenError("Use of reserved operator " + TokenToString(Token) + " is illegal",
+             Token);
   case token::EQUAL:
   case token::MUL_ASSIGN:
   case token::DIV_ASSIGN:
@@ -278,55 +285,49 @@ parse_node parser::ParseAssignmentOperator() {
     return N;
   }
 
-  case token::MOD_ASSIGN:
-  case token::LEFT_ASSIGN:
-  case token::RIGHT_ASSIGN:
-  case token::AND_ASSIGN:
-  case token::XOR_ASSIGN:
-  case token::OR_ASSIGN:
-    error("Use of reserved operator", Token);
-    return parse_node();
-
   default:
-    error("Unexpected token", Token);
+    GenError("Expected assignement operator before token " +
+                 TokenToString(Token),
+             Token);
     return parse_node();
   }
 }
 
 parse_node parser::ParseFunctionCall() {
   parse_node N;
-  if (Token.Type == token::IDENTIFIER || IsConstructorIdentifier(Token.Type) ||
-      Token.Type == token::ASM) {
-    N.Children.push_back(parse_node(Token));
-    Match(Token.Type);
-    N.Children.push_back(parse_node(Token));
-    Match(token::LEFT_PAREN);
-    if (Token.Type != token::RIGHT_PAREN) {
-      if (Token.Type == token::VOID) {
-        N.Children.push_back(parse_node(Token));
-        Match(token::VOID);
-        N.Children.push_back(parse_node(Token));
-        Match(token::RIGHT_PAREN);
-      } else {
-        parse_node NSub;
-        NSub.Children.push_back(ParseAssignmentExpression());
-        while (Token.Type == token::COMMA) {
-          // NSub.Children.push_back(parse_node(Token));
-          Match(token::COMMA);
-          NSub.Children.push_back(ParseAssignmentExpression());
-        }
-        N.Children.push_back(NSub);
-        N.Children.push_back(parse_node(Token));
-        Match(token::RIGHT_PAREN);
-      }
+  if (!(Token.Type == token::IDENTIFIER ||
+        IsConstructorIdentifier(Token.Type) || Token.Type == token::ASM)) {
+    GenError("Expected function identifier or type constructor before token " +
+                 TokenToString(Token),
+             Token);
+  }
+  N.Children.push_back(parse_node(Token));
+  Match(Token.Type);
+  N.Children.push_back(parse_node(Token));
+  Match(token::LEFT_PAREN);
+  if (Token.Type != token::RIGHT_PAREN) {
+    if (Token.Type == token::VOID) {
+      N.Children.push_back(parse_node(Token));
+      Match(token::VOID);
+      N.Children.push_back(parse_node(Token));
+      Match(token::RIGHT_PAREN);
     } else {
+      parse_node NSub;
+      NSub.Children.push_back(ParseAssignmentExpression());
+      while (Token.Type == token::COMMA) {
+        // NSub.Children.push_back(parse_node(Token));
+        Match(token::COMMA);
+        NSub.Children.push_back(ParseAssignmentExpression());
+      }
+      N.Children.push_back(NSub);
       N.Children.push_back(parse_node(Token));
       Match(token::RIGHT_PAREN);
     }
   } else {
-    error("Expected function identifier or type constructor", Token);
-    return parse_node();
+    N.Children.push_back(parse_node(Token));
+    Match(token::RIGHT_PAREN);
   }
+
   return N;
 }
 
@@ -440,7 +441,9 @@ parse_node parser::ParsePrimaryExpression() {
     return N;
 
   default: {
-    error("Unexpected token in pimary expression", Token);
+    GenError("Unexpected token " + TokenToString(Token) +
+                 " in pimary expression",
+             Token);
     return parse_node();
   }
   }
@@ -538,7 +541,8 @@ parse_node parser::ParsePrecisionQualifier() {
     return N;
   }
 
-  error("Expeceted precision qualifier", Token);
+  GenError("Expeceted precision qualifier before token " + TokenToString(Token),
+           Token);
   return parse_node();
 }
 
@@ -628,7 +632,8 @@ parse_node parser::ParseTypeSpecifierNoPrecision() {
     return ParseStructSpecifier();
   }
 
-  error("Expected type specifier", Token);
+  GenError("Expected type specifier before token " + TokenToString(Token),
+           Token);
   return parse_node();
 }
 
@@ -755,7 +760,7 @@ parse_node parser::ParseSelectionStatement() {
 parse_node parser::ParseJumpStatement() {
   parse_node N;
   if (!IsJumpToken(Token.Type)) {
-    error("Expected jump token", Token);
+    GenError("Expected jump token before token " + TokenToString(Token), Token);
     return parse_node();
   }
   int T = Token.Type;
