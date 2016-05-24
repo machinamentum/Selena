@@ -72,4 +72,5 @@ symtable::symtable() {
 
   // TODO reserved keywords
   Insert("asm", token::ASM);
+  Insert("inline", token::INLINE);
 }

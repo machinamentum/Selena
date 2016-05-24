@@ -140,10 +140,10 @@ ast_node *ast_node::BuildConstantPrimitive(ast_node *Parent, parse_node *Node) {
   ast_node &ASTNode = *new ast_node(Parent);
   ASTNode.Type = ast_node::VARIABLE;
   ASTNode.VarType = ast_node::FLOAT;
-  if (Node->Token.Type == token::FLOAT) {
+  if (Node->Token.Type == token::FLOATCONSTANT) {
     ASTNode.VarType = ast_node::FLOAT_LITERAL;
     ASTNode.FloatValue = Node->Token.FloatValue;
-  } else if (Node->Token.Type == token::INT) {
+  } else if (Node->Token.Type == token::INTCONSTANT) {
     ASTNode.VarType = ast_node::INT_LITERAL;
     ASTNode.IntValue = Node->Token.IntValue;
   }
@@ -211,7 +211,8 @@ ast_node *ast_node::BuildFromIdentifier(ast_node *ASTParent,
       StringNode.VarType = ast_node::STRING_LITERAL;
       StringNode.Id = std::string(Id);
       return &StringNode;
-    } else if (Token->Type == token::FLOAT || Token->Type == token::INT) {
+    } else if (Token->Type == token::FLOATCONSTANT ||
+               Token->Type == token::INTCONSTANT) {
       return BuildConstantPrimitive(ASTParent, Node);
     } else {
       return BuildVariable(ASTParent, PNode);
@@ -220,9 +221,29 @@ ast_node *ast_node::BuildFromIdentifier(ast_node *ASTParent,
   return new ast_node(ASTParent);
 }
 
+static ast_node *BuildBuiltin(const std::string &s, int Type) {
+  ast_node *A = new ast_node(nullptr);
+  A->Type = Type;
+  A->Typename = std::string(s);
+  A->Id = s;
+  return A;
+}
+
 ast_node *ast_node::BuildFromParseTree(ast_node *Parent, parse_node *PNode) {
   ast_node &ASTNode = *new ast_node(Parent);
   ASTNode.Type = ast_node::NONE;
+  if (!Parent) { // tree root
+    ASTNode.PushChild(BuildBuiltin("vec2", ast_node::STRUCT));
+    ASTNode.PushChild(BuildBuiltin("vec3", ast_node::STRUCT));
+    ASTNode.PushChild(BuildBuiltin("vec4", ast_node::STRUCT));
+    ASTNode.PushChild(BuildBuiltin("bvec2", ast_node::STRUCT));
+    ASTNode.PushChild(BuildBuiltin("bvec3", ast_node::STRUCT));
+    ASTNode.PushChild(BuildBuiltin("bvec4", ast_node::STRUCT));
+    ASTNode.PushChild(BuildBuiltin("ivec2", ast_node::STRUCT));
+    ASTNode.PushChild(BuildBuiltin("ivec3", ast_node::STRUCT));
+    ASTNode.PushChild(BuildBuiltin("ivec4", ast_node::STRUCT));
+  }
+
   if (PNode->Type == parse_node::E) {
     for (parse_node &PN : PNode->Children) {
       if (PNode->Children.size() == 3 &&

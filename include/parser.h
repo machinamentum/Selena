@@ -42,6 +42,8 @@ struct parser {
   static bool IsIterationToken(int T);
   static bool IsJumpToken(int T);
   static bool IsTypeSpecifier(int T);
+  static bool IsConstructorIdentifier(int T);
+  static bool IsParameterQualifier(int T);
 
   parse_node ParseTypeSpecifier();
   parse_node ParseFullySpecifiedType();

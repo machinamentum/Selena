@@ -28,6 +28,12 @@ void PrintToken(token *Token) {
     return;
   }
   switch (Token->Type) {
+  case token::ASM:
+    printf("%s\n", Token->Id.c_str());
+    break;
+  case token::INLINE:
+    printf("%s\n", Token->Id.c_str());
+    break;
   case token::FLOATCONSTANT:
     printf("%f\n", Token->FloatValue);
     break;

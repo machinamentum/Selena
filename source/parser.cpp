@@ -43,7 +43,7 @@ parse_node parser::ParseTypeQualifier() {
     N.Children.push_back(parse_node(Token));
     Match(Token.Type);
   } else {
-    error("Unexpected token", Token);
+    error("Expected type qualifier", Token);
   }
 
   return N;
@@ -58,9 +58,64 @@ parse_node parser::ParseFullySpecifiedType() {
   return N;
 }
 
-parse_node parser::ParseParameterDeclaration() {}
+parse_node parser::ParseParameterDeclaration() {
+  parse_node N;
+  if (IsParameterQualifier(Token.Type)) {
+    N.Children.push_back(parse_node(Token));
+    Match(Token.Type);
+    if (IsPrecisionQualifier(Token.Type) || IsTypeSpecifier(Token.Type)) {
+      N.Append(ParseTypeSpecifier());
+      N.Children.push_back(parse_node(Token));
+      Match(token::LEFT_BRACKET);
+      N.Children.push_back(ParseConstantExpression());
+      N.Children.push_back(parse_node(Token));
+      Match(token::RIGHT_BRACKET);
+    } else {
+      N.Append(ParseTypeSpecifier());
+      N.Children.push_back(parse_node(Token));
+      Match(token::IDENTIFIER);
+      if (Token.Type == token::LEFT_BRACKET) {
+        N.Children.push_back(parse_node(Token));
+        Match(token::LEFT_BRACKET);
+        N.Children.push_back(ParseConstantExpression());
+        N.Children.push_back(parse_node(Token));
+        Match(token::RIGHT_BRACKET);
+      }
+    }
+  } else if (IsPrecisionQualifier(Token.Type) || IsTypeSpecifier(Token.Type)) {
+    if (IsTypeQualifier(Token.Type)) {
+      N.Append(ParseTypeQualifier());
+    }
+    if (IsParameterQualifier(Token.Type)) {
+      N.Children.push_back(parse_node(Token));
+      Match(Token.Type);
+    }
+    N.Append(ParseTypeSpecifier());
+    if (Token.Type == token::IDENTIFIER) {
+      N.Children.push_back(parse_node(Token));
+      Match(token::IDENTIFIER);
+      if (Token.Type == token::LEFT_BRACKET) {
+        N.Children.push_back(parse_node(Token));
+        Match(token::LEFT_BRACKET);
+        N.Children.push_back(ParseConstantExpression());
+        N.Children.push_back(parse_node(Token));
+        Match(token::RIGHT_BRACKET);
+      }
+    } else if (Token.Type == token::LEFT_BRACKET) {
+      if (Token.Type == token::LEFT_BRACKET) {
+        N.Children.push_back(parse_node(Token));
+        Match(token::LEFT_BRACKET);
+        N.Children.push_back(ParseConstantExpression());
+        N.Children.push_back(parse_node(Token));
+        Match(token::RIGHT_BRACKET);
+      }
+    } else {
+      error("Unexpected tokenw", Token);
+    }
+  }
 
-parse_node parser::ParseFunctionHeaderWithParameters() {}
+  return N;
+}
 
 parse_node parser::ParseFunctionHeader() {
   parse_node N;
@@ -76,6 +131,11 @@ parse_node parser::ParseFunctionDeclarator() {
   parse_node N = ParseFunctionHeader();
   if (Token.Type != token::RIGHT_PAREN) {
     N.Children.push_back(ParseParameterDeclaration());
+    while (Token.Type == token::COMMA) {
+      N.Children.push_back(parse_node(Token));
+      Match(token::COMMA);
+      N.Children.push_back(ParseParameterDeclaration());
+    }
   } else {
     N.Children.push_back(parse_node());
   }
@@ -179,6 +239,33 @@ bool parser::IsTypeSpecifier(int T) {
   return false;
 }
 
+bool parser::IsConstructorIdentifier(int T) {
+  switch (T) {
+  case token::FLOAT:
+  case token::INT:
+  case token::BOOL:
+  case token::VEC2:
+  case token::VEC3:
+  case token::VEC4:
+  case token::BVEC2:
+  case token::BVEC3:
+  case token::BVEC4:
+  case token::IVEC2:
+  case token::IVEC3:
+  case token::IVEC4:
+  case token::MAT2:
+  case token::MAT3:
+  case token::MAT4:
+  case token::TYPE_NAME:
+    return true;
+  }
+  return false;
+}
+
+bool parser::IsParameterQualifier(int T) {
+  return T == token::IN || T == token::OUT || T == token::INOUT;
+}
+
 parse_node parser::ParseAssignmentOperator() {
   switch (Token.Type) {
   case token::EQUAL:
@@ -207,8 +294,40 @@ parse_node parser::ParseAssignmentOperator() {
 }
 
 parse_node parser::ParseFunctionCall() {
-  // TODO
-  return parse_node();
+  parse_node N;
+  if (Token.Type == token::IDENTIFIER || IsConstructorIdentifier(Token.Type) ||
+      Token.Type == token::ASM) {
+    N.Children.push_back(parse_node(Token));
+    Match(Token.Type);
+    N.Children.push_back(parse_node(Token));
+    Match(token::LEFT_PAREN);
+    if (Token.Type != token::RIGHT_PAREN) {
+      if (Token.Type == token::VOID) {
+        N.Children.push_back(parse_node(Token));
+        Match(token::VOID);
+        N.Children.push_back(parse_node(Token));
+        Match(token::RIGHT_PAREN);
+      } else {
+        parse_node NSub;
+        NSub.Children.push_back(ParseAssignmentExpression());
+        while (Token.Type == token::COMMA) {
+          // NSub.Children.push_back(parse_node(Token));
+          Match(token::COMMA);
+          NSub.Children.push_back(ParseAssignmentExpression());
+        }
+        N.Children.push_back(NSub);
+        N.Children.push_back(parse_node(Token));
+        Match(token::RIGHT_PAREN);
+      }
+    } else {
+      N.Children.push_back(parse_node(Token));
+      Match(token::RIGHT_PAREN);
+    }
+  } else {
+    error("Expected function identifier or type constructor", Token);
+    return parse_node();
+  }
+  return N;
 }
 
 parse_node parser::ParseIntegerExpression() { return ParseExpression(); }
@@ -315,12 +434,13 @@ parse_node parser::ParsePrimaryExpression() {
   case token::FLOATCONSTANT:
   case token::BOOLCONSTANT:
   case token::IDENTIFIER:
+  case token::DQSTRING:
     N = parse_node(Token);
     Match(Token.Type);
     return N;
 
   default: {
-    error("Unexpected token", Token);
+    error("Unexpected token in pimary expression", Token);
     return parse_node();
   }
   }
@@ -418,7 +538,7 @@ parse_node parser::ParsePrecisionQualifier() {
     return N;
   }
 
-  error("Unexpected token", Token);
+  error("Expeceted precision qualifier", Token);
   return parse_node();
 }
 

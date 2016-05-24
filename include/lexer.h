@@ -109,6 +109,7 @@ struct token {
 
     // reserved
     ASM,
+    INLINE,
   };
 
   int Type;
