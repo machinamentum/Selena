@@ -61,8 +61,8 @@ struct neocode_register_file {
     if (Register >= 0x10 && Register < 0x20)
       Temp[Register - 0x10] = 0;
 
-    if (Register >= 0x20)
-      Constants[Register - 0x20] = 0;
+    // if (Register >= 0x20)
+    //   Constants[Register - 0x20] = 0;
   }
 
   void FreeAllTemp() {

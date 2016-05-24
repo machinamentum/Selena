@@ -86,6 +86,15 @@ static std::string RegisterName(neocode_variable &Var, int UseRaw = 0) {
   }
 }
 
+static std::string RegisterName(int Register) {
+  if (Register < 0x10)
+    return std::string("o") + std::to_string(Register);
+  if (Register < 0x20)
+    return std::string("r") + std::to_string(Register - 0x10);
+
+  return std::string("c") + std::to_string(Register - 0x20);
+}
+
 neocode_variable *neocode_function::GetVariable(std::string Name) {
 
   for (neocode_variable &V : Variables) {
@@ -287,12 +296,12 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
     In.Type = neocode_instruction::MOV;
     In.Dst = CGNeoBuildInstruction(Function, ASTNode->Children[0]).Dst;
     In.Src1 = CGNeoBuildInstruction(Function, ASTNode->Children[1]).Dst;
-    if (Function->Instructions.back().Type != neocode_instruction::EMPTY &&
-        Function->Instructions.back().Type != neocode_instruction::MOV) {
-      Function->Instructions.back().Dst = In.Dst;
-    } else {
-      Function->Instructions.push_back(In);
-    }
+    // if (Function->Instructions.back().Type != neocode_instruction::EMPTY &&
+    //     Function->Instructions.back().Type != neocode_instruction::MOV) {
+    //   Function->Instructions.back().Dst = In.Dst;
+    // } else {
+    Function->Instructions.push_back(In);
+    // }
     return In;
   }
 
@@ -342,6 +351,7 @@ neocode_function CGNeoBuildFunction(neocode_program *Program,
 
 neocode_program CGNeoBuildProgramInstance(ast_node *ASTNode) {
   neocode_program Program;
+  Program.Registers = {};
   Program.Globals.push_back(
       (neocode_variable){"gl_Position",
                          "vec4",
@@ -369,11 +379,14 @@ neocode_program CGNeoBuildProgramInstance(ast_node *ASTNode) {
                                                {0}});
   Program.Globals.push_back(
       (neocode_variable){"gl_ModelViewProjectionMatrix",
-                         "mat4x4",
+                         "mat4",
                          ast_node::STRUCT,
                          Program.Registers.AllocConstant(),
                          neocode_variable::INPUT_UNIFORM,
                          {0}});
+  Program.Registers.AllocConstant();
+  Program.Registers.AllocConstant();
+  Program.Registers.AllocConstant();
   for (auto Node : ASTNode->Children) {
     if (Node->Type == ast_node::FUNCTION) {
       Program.Functions.push_back(CGNeoBuildFunction(&Program, Node));
@@ -399,10 +412,29 @@ void CGNeoGenerateInstruction(neocode_instruction *Instruction,
     break;
 
   case neocode_instruction::MUL:
-    os << " "
-       << "mul " << RegisterName(Instruction->Dst) << ", "
-       << RegisterName(Instruction->Src1) << ", "
-       << RegisterName(Instruction->Src2) << std::endl;
+    if (Instruction->Src1.TypeName.compare("mat4") == 0) {
+      os << " "
+         << "dp4 " << RegisterName(Instruction->Dst) << ".x, "
+         << RegisterName(Instruction->Src1) << "[0]"
+         << ", " << RegisterName(Instruction->Src2) << std::endl;
+      os << " "
+         << "dp4 " << RegisterName(Instruction->Dst) << ".y, "
+         << RegisterName(Instruction->Src1) << "[1]"
+         << ", " << RegisterName(Instruction->Src2) << std::endl;
+      os << " "
+         << "dp4 " << RegisterName(Instruction->Dst) << ".z, "
+         << RegisterName(Instruction->Src1) << "[2]"
+         << ", " << RegisterName(Instruction->Src2) << std::endl;
+      os << " "
+         << "dp4 " << RegisterName(Instruction->Dst) << ".w, "
+         << RegisterName(Instruction->Src1) << "[3]"
+         << ", " << RegisterName(Instruction->Src2) << std::endl;
+    } else {
+      os << " "
+         << "mul " << RegisterName(Instruction->Dst) << ", "
+         << RegisterName(Instruction->Src1) << ", "
+         << RegisterName(Instruction->Src2) << std::endl;
+    }
     break;
 
   case neocode_instruction::RSQ:
@@ -474,12 +506,15 @@ static void WriteVarible(neocode_variable &V, std::ostream &os) {
        << Const.Float.X << "," << Const.Float.Y << "," << Const.Float.Z << ","
        << Const.Float.W << ")" << std::endl;
   } else {
-    os << ".alias " << V.Name << " " << RegisterName(V, 1) << std::endl;
+    os << ".alias " << V.Name << " " << RegisterName(V, 1);
+    if (V.TypeName.compare("mat4") == 0)
+      os << " - " << RegisterName(V.Register + 3);
+    os << std::endl;
   }
 }
 
 void CGNeoGenerateCode(neocode_program *Program, std::ostream &os) {
-  os << ".alias CaelinaCCVersion c95 as (0.0, 0.0, 0.0, 0.1)" << std::endl;
+  os << ".alias SelenaCCVersion c95 as (0.0, 0.0, 0.0, 0.1)" << std::endl;
   for (neocode_variable &V : Program->Globals) {
     WriteVarible(V, os);
   }
