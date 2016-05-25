@@ -30,6 +30,7 @@ struct parser {
   lexer_state &Lex;
   token Token;
   symtable *SymbolTable;
+  void (*ErrorFunc)(const std::string &, const std::string &, int, int);
 
   typedef parse_node (parser::*ParseFuncPtr)();
 

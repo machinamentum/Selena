@@ -8,7 +8,8 @@
 
 char *SlurpFile(const char *FilePath, long *FileSize) {
   std::ifstream is(FilePath);
-  if (!is) return nullptr;
+  if (!is)
+    return nullptr;
   is.seekg(0, std::ios::end);
   long Length = is.tellg();
   is.seekg(0, std::ios::beg);
@@ -176,13 +177,20 @@ void PrintAST(ast_node *AST, int Depth) {
   }
 }
 
+static void ErrorCallback(const std::string &ErrMsg,
+                          const std::string &OffendingLine, int LineNumber,
+                          int LineOffset) {
+  printf("\033[1m\e[31merror\e[0m\033[1m:%d:%d: %s\n\033[0m%s\n", LineNumber,
+         LineOffset, ErrMsg.c_str(), OffendingLine.c_str());
+  printf("%*c^\n", LineOffset, ' ');
+}
+
 static void PrintHelp(const std::string &ExecName) {
   printf("Usage: %s <input_shader> [options]\n", ExecName.c_str());
   printf("Options:\n");
   printf("     -o <output>       | Select output file\n");
   printf("     -h,--help         | Show this help message\n");
   printf("     --verbose         | Print parse and syntax tree structures\n");
-
 }
 
 int main(int argc, char **argv) {
@@ -217,6 +225,7 @@ int main(int argc, char **argv) {
   }
   LexerInit(&Lexer, Source, Source + Size, &SymbolTable);
   parser Parser = parser(Lexer);
+  Parser.ErrorFunc = ErrorCallback;
   parse_node RootNode = Parser.ParseTranslationUnit();
   if (PrintTrees)
     PrintParseTree(&RootNode, 0);

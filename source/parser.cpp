@@ -4,9 +4,8 @@
 
 void parser::GenError(const std::string &S, const token &T) {
   std::string Line = LexerGetLine(&Lex, T.Line);
-  // TODO driver-defined error callback
-  printf(("error:%d:%d: %s\n" + Line + "\n").c_str(), T.Line, T.Offset,
-         S.c_str());
+  if (ErrorFunc)
+    ErrorFunc(S, Line, T.Line, T.Offset);
 }
 
 parser::parser(lexer_state &L) : Lex(L) { SymbolTable = Lex.Table; }
@@ -15,7 +14,7 @@ void parser::Match(int T) {
   if (T == Token.Type) {
     Token = Lex.GetToken();
   } else {
-    GenError("Expected " + TokenToString(T) + " before token " +
+    GenError("expected " + TokenToString(T) + " before token " +
                  TokenToString(Token),
              Token);
   }
@@ -41,7 +40,7 @@ parse_node parser::ParseTypeQualifier() {
     N.Children.push_back(parse_node(Token));
     Match(Token.Type);
   } else {
-    GenError("Expected type qualifier before token " + TokenToString(Token),
+    GenError("expected type qualifier before token " + TokenToString(Token),
              Token);
   }
 
@@ -109,7 +108,7 @@ parse_node parser::ParseParameterDeclaration() {
         Match(token::RIGHT_BRACKET);
       }
     } else {
-      GenError("Unexpected token", Token);
+      GenError("unexpected token", Token);
     }
   }
 
@@ -273,7 +272,7 @@ parse_node parser::ParseAssignmentOperator() {
   case token::AND_ASSIGN:
   case token::XOR_ASSIGN:
   case token::OR_ASSIGN:
-    GenError("Use of reserved operator " + TokenToString(Token) + " is illegal",
+    GenError("use of reserved operator " + TokenToString(Token) + " is illegal",
              Token);
   case token::EQUAL:
   case token::MUL_ASSIGN:
@@ -286,7 +285,7 @@ parse_node parser::ParseAssignmentOperator() {
   }
 
   default:
-    GenError("Expected assignement operator before token " +
+    GenError("expected assignement operator before token " +
                  TokenToString(Token),
              Token);
     return parse_node();
@@ -297,7 +296,7 @@ parse_node parser::ParseFunctionCall() {
   parse_node N;
   if (!(Token.Type == token::IDENTIFIER ||
         IsConstructorIdentifier(Token.Type) || Token.Type == token::ASM)) {
-    GenError("Expected function identifier or type constructor before token " +
+    GenError("expected function identifier or type constructor before token " +
                  TokenToString(Token),
              Token);
   }
@@ -441,7 +440,7 @@ parse_node parser::ParsePrimaryExpression() {
     return N;
 
   default: {
-    GenError("Unexpected token " + TokenToString(Token) +
+    GenError("unexpected token " + TokenToString(Token) +
                  " in pimary expression",
              Token);
     return parse_node();
@@ -541,7 +540,7 @@ parse_node parser::ParsePrecisionQualifier() {
     return N;
   }
 
-  GenError("Expeceted precision qualifier before token " + TokenToString(Token),
+  GenError("expeceted precision qualifier before token " + TokenToString(Token),
            Token);
   return parse_node();
 }
@@ -632,7 +631,7 @@ parse_node parser::ParseTypeSpecifierNoPrecision() {
     return ParseStructSpecifier();
   }
 
-  GenError("Expected type specifier before token " + TokenToString(Token),
+  GenError("expected type specifier before token " + TokenToString(Token),
            Token);
   return parse_node();
 }
@@ -760,7 +759,7 @@ parse_node parser::ParseSelectionStatement() {
 parse_node parser::ParseJumpStatement() {
   parse_node N;
   if (!IsJumpToken(Token.Type)) {
-    GenError("Expected jump token before token " + TokenToString(Token), Token);
+    GenError("expected jump token before token " + TokenToString(Token), Token);
     return parse_node();
   }
   int T = Token.Type;
@@ -885,7 +884,16 @@ parse_node parser::ParseDeclaration() {
   if (Token.Type == token::LEFT_PAREN) {
     Lex = S;
     Token = Tok;
-    return ParseFunctionPrototype();
+    parse_node F = ParseFunctionPrototype();
+    if (Token.Type != token::SEMICOLON) {
+      GenError("expected function body after function declarator", Token);
+      while (Token.Type != token::SEMICOLON) {
+        Match(Token.Type);
+      }
+      F.Children.push_back(parse_node(Token));
+      Match(token::SEMICOLON);
+    }
+    return F;
   }
 
   Lex = S;
