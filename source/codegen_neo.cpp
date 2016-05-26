@@ -39,12 +39,15 @@ static int GetInstructionFromIdentifier(std::string Name) {
   if (Name.compare("log") == 0) {
     return neocode_instruction::LG2;
   }
+  if (Name.compare("dp4") == 0) {
+    return neocode_instruction::DP4;
+  }
   return neocode_instruction::EMPTY;
 }
 
 static int GetSwizzleFromIdentifier(std::string Id) {
   int Swizzle = 0;
-  for (int i = 0; i < 4 && i < Id.length(); ++i) {
+  for (int i = 0; i < 4 && i < (Id.length() + 1); ++i) {
     switch (Id[i]) {
     case 'x':
       Swizzle |= (1 << (i * 4));
@@ -60,29 +63,44 @@ static int GetSwizzleFromIdentifier(std::string Id) {
       continue;
     }
   }
+  return Swizzle;
 }
 
-static std::string GetSwizzleAsString(int Swizzle) {}
+static std::string GetSwizzleAsString(neocode_variable &V) {
+  if (V.TypeName.compare("mat4") == 0) {
+    return "[" + std::to_string(V.Swizzle) + "]";
+  }
+  std::string S;
+  unsigned int Swizz = V.Swizzle;
+  for (int i = 0; i < 4; ++i) {
+    int Index = ((Swizz >> (i * 4)) & 0b1111) - 1;
+    if (Index < 0) continue;
+    S += std::string(1, "xyzw"[Index]);
+  }
+  if (S.length()) return "." + S;
+  return "";
+}
 
 static std::string RegisterName(neocode_variable &Var, int UseRaw = 0) {
+  std::string Swizz = GetSwizzleAsString(Var);
   if (Var.Name.size() && !UseRaw)
-    return Var.Name;
+    return Var.Name + Swizz;
   if (Var.RegisterType == 0) {
     int Register = Var.Register;
     if (Register < 0x10)
-      return std::string("v") + std::to_string(Register);
+      return std::string("v") + std::to_string(Register) + Swizz;
     if (Register < 0x20)
-      return std::string("r") + std::to_string(Register - 0x10);
+      return std::string("r") + std::to_string(Register - 0x10) + Swizz;
 
-    return std::string("c") + std::to_string(Register - 0x20);
+    return std::string("c") + std::to_string(Register - 0x20) + Swizz;
   } else {
     int Register = Var.Register;
     if (Register < 0x10)
-      return std::string("o") + std::to_string(Register);
+      return std::string("o") + std::to_string(Register) + Swizz;
     if (Register < 0x20)
-      return std::string("r") + std::to_string(Register - 0x10);
+      return std::string("r") + std::to_string(Register - 0x10) + Swizz;
 
-    return std::string("c") + std::to_string(Register - 0x20);
+    return std::string("c") + std::to_string(Register - 0x20) + Swizz;
   }
 }
 
@@ -137,11 +155,12 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
     Constant.RegisterType = 0;
     Constant.Register = Function->Program->Registers.AllocConstant();
     Constant.Name =
-        std::string("Anonymous_float") + "_" + RegisterName(Constant, 1);
+        std::string("Anonymous_float") + "_" + RegisterName(Constant.Register);
     Constant.Const.Float.X = ASTNode->FloatValue;
     Constant.Const.Float.Y = ASTNode->FloatValue;
     Constant.Const.Float.Z = ASTNode->FloatValue;
     Constant.Const.Float.W = ASTNode->FloatValue;
+    Constant.Swizzle = 0;
     Function->Program->Globals.push_back(Constant);
     neocode_instruction In;
     In.Type = neocode_instruction::EMPTY;
@@ -210,7 +229,8 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
       Constant.RegisterType = 0;
       Constant.Register = Function->Program->Registers.AllocConstant();
       Constant.Name = std::string("Anonymous_") + ASTNode->Id + "_" +
-                      RegisterName(Constant, 1);
+                      RegisterName(Constant.Register);
+      Constant.Swizzle = 0;
       Constant.Const.Float.X = ASTNode->Children[0]->FloatValue;
       Constant.Const.Float.Y = ASTNode->Children[1]->FloatValue;
       Constant.Const.Float.Z = ASTNode->Children[2]->FloatValue;
@@ -265,12 +285,31 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
 
   if (ASTNode->Type == ast_node::MULTIPLY) {
     neocode_instruction In;
-    In.Type = neocode_instruction::MUL;
     In.Dst = (neocode_variable){"", "", ast_node::STRUCT,
                                 Function->Program->Registers.AllocTemp(), 0};
     In.Src1 = CGNeoBuildInstruction(Function, ASTNode->Children[0]).Dst;
     In.Src2 = CGNeoBuildInstruction(Function, ASTNode->Children[1]).Dst;
-    Function->Instructions.push_back(In);
+    if (In.Src1.TypeName.compare("mat4") == 0) {
+      In.Type = neocode_instruction::DP4;
+
+      In.Dst.Swizzle = GetSwizzleFromIdentifier("x");
+      In.Src1.Swizzle = 0;
+      Function->Instructions.push_back(In);
+      In.Dst.Swizzle = GetSwizzleFromIdentifier("y");
+      In.Src1.Swizzle = 1;
+      Function->Instructions.push_back(In);
+      In.Dst.Swizzle = GetSwizzleFromIdentifier("z");
+      In.Src1.Swizzle = 2;
+      Function->Instructions.push_back(In);
+      In.Dst.Swizzle = GetSwizzleFromIdentifier("w");
+      In.Src1.Swizzle = 3;
+      Function->Instructions.push_back(In);
+      In.Dst.Swizzle = 0;
+      return In;
+    } else {
+      In.Type = neocode_instruction::MUL;
+      Function->Instructions.push_back(In);
+    }
     return In;
   }
 
@@ -412,29 +451,17 @@ void CGNeoGenerateInstruction(neocode_instruction *Instruction,
     break;
 
   case neocode_instruction::MUL:
-    if (Instruction->Src1.TypeName.compare("mat4") == 0) {
-      os << " "
-         << "dp4 " << RegisterName(Instruction->Dst) << ".x, "
-         << RegisterName(Instruction->Src1) << "[0]"
-         << ", " << RegisterName(Instruction->Src2) << std::endl;
-      os << " "
-         << "dp4 " << RegisterName(Instruction->Dst) << ".y, "
-         << RegisterName(Instruction->Src1) << "[1]"
-         << ", " << RegisterName(Instruction->Src2) << std::endl;
-      os << " "
-         << "dp4 " << RegisterName(Instruction->Dst) << ".z, "
-         << RegisterName(Instruction->Src1) << "[2]"
-         << ", " << RegisterName(Instruction->Src2) << std::endl;
-      os << " "
-         << "dp4 " << RegisterName(Instruction->Dst) << ".w, "
-         << RegisterName(Instruction->Src1) << "[3]"
-         << ", " << RegisterName(Instruction->Src2) << std::endl;
-    } else {
-      os << " "
-         << "mul " << RegisterName(Instruction->Dst) << ", "
-         << RegisterName(Instruction->Src1) << ", "
-         << RegisterName(Instruction->Src2) << std::endl;
-    }
+    os << " "
+       << "mul " << RegisterName(Instruction->Dst) << ", "
+       << RegisterName(Instruction->Src1) << ", "
+       << RegisterName(Instruction->Src2) << std::endl;
+    break;
+
+  case neocode_instruction::DP4:
+    os << " "
+       << "dp4 " << RegisterName(Instruction->Dst) << ", "
+       << RegisterName(Instruction->Src1) << ", "
+       << RegisterName(Instruction->Src2) << std::endl;
     break;
 
   case neocode_instruction::RSQ:
@@ -486,12 +513,12 @@ void CGNeoGenerateFunction(neocode_function *Function, std::ostream &os) {
 }
 
 static std::string OutputName(int Register) {
-  const std::string ONames[7] = {
-      "position",  "quaternion", "color", "texcoord0",
-      "texcoord1", "texcoord2",  "view",
+  const std::string ONames[9] = {
+      "position",  "quaternion", "color", "texcoord0", "texcoord0w",
+      "texcoord1", "texcoord2",  "unk",   "view",
   };
 
-  return ONames[Register - 1];
+  return ONames[Register];
 }
 
 static void WriteVarible(neocode_variable &V, std::ostream &os) {

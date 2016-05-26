@@ -99,10 +99,11 @@ struct neocode_variable {
     OUTPUT_QUATERNION,
     OUTPUT_COLOR,
     OUTPUT_TEXCOORD0,
+    OUTPUT_TEXCOORD0W,
     OUTPUT_TEXCOORD1,
     OUTPUT_TEXCOORD2,
+    OUTPUT_UNK,
     OUTPUT_VIEW,
-
   };
 
   std::string Name;
@@ -115,7 +116,7 @@ struct neocode_variable {
 };
 
 struct neocode_instruction {
-  enum { EMPTY, INLINE, MOV, MUL, RSQ, RCP, NOP, END, EX2, LG2 };
+  enum { EMPTY, INLINE, MOV, MUL, RSQ, RCP, NOP, END, EX2, LG2, DP4 };
 
   int Type;
   neocode_variable Dst;
