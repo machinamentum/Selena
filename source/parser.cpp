@@ -5,6 +5,7 @@
 void parser::GenError(const std::string &S, const token &T) {
   std::string Line = LexerGetLine(&Lex, T.Line);
   if (ErrorFunc)
+    if (ErrorDisableCount == 0)
     ErrorFunc(S, Line, T.Line, T.Offset);
 }
 
@@ -18,6 +19,31 @@ void parser::Match(int T) {
                  TokenToString(Token),
              Token);
   }
+}
+
+void parser::DisableErrors() {
+  ++ErrorDisableCount;
+}
+
+void parser::EnableErrors() {
+  --ErrorDisableCount;
+}
+
+void parser::PushState() {
+  ParseStateStack.push_back((parse_state){Lex, Token});
+}
+
+void parser::PopState() {
+  parse_state S = ParseStateStack.back();
+  Lex = S.L;
+  Token = S.T;
+  ParseStateStack.pop_back();
+}
+
+void parser::RestoreState() {
+  parse_state S = ParseStateStack.back();
+  Lex = S.L;
+  Token = S.T;
 }
 
 parse_node parser::ParseTypeSpecifier() {
@@ -633,6 +659,7 @@ parse_node parser::ParseTypeSpecifierNoPrecision() {
 
   GenError("expected type specifier before token " + TokenToString(Token),
            Token);
+  Match(Token.Type);
   return parse_node();
 }
 
@@ -673,7 +700,8 @@ parse_node parser::ParseStatementWithScope() {
 parse_node parser::ParseDeclarationStatement() { return ParseDeclaration(); }
 
 parse_node parser::ParseCondition() {
-  if (IsTypeQualifier(Token.Type) || IsTypeSpecifier(Token.Type)) {
+  if (IsTypeQualifier(Token.Type) || IsTypeSpecifier(Token.Type) ||
+      IsPrecisionQualifier(Token.Type)) {
     parse_node N;
     N.Children.push_back(ParseFullySpecifiedType());
     N.Children.push_back(parse_node(Token));
@@ -837,6 +865,15 @@ parse_node parser::ParseFunctionDefinition() {
 
 parse_node parser::ParseSingleDeclaration() {
   parse_node N;
+  if (!(IsTypeSpecifier(Token.Type) || IsTypeQualifier(Token.Type) ||
+        IsPrecisionQualifier(Token.Type))) {
+    GenError("epected type specifier before token " + TokenToString(Token),
+             Token);
+    while (Token.Type !=token::SEMICOLON && Token.Type != token::END) {
+      Match(Token.Type);
+    }
+    return parse_node();
+  }
   N.Children.push_back(ParseFullySpecifiedType());
   N.Children.push_back(parse_node(Token));
   Match(token::IDENTIFIER);
@@ -878,26 +915,21 @@ parse_node parser::ParseDeclaration() {
     Match(token::SEMICOLON);
     return N;
   }
-  lexer_state S(Lex);
-  token Tok(Token);
+  PushState();
+  DisableErrors();
   ParseSingleDeclaration();
   if (Token.Type == token::LEFT_PAREN) {
-    Lex = S;
-    Token = Tok;
+    PopState();
+    EnableErrors();
     parse_node F = ParseFunctionPrototype();
     if (Token.Type != token::SEMICOLON) {
       GenError("expected function body after function declarator", Token);
-      while (Token.Type != token::SEMICOLON) {
-        Match(Token.Type);
-      }
-      F.Children.push_back(parse_node(Token));
-      Match(token::SEMICOLON);
     }
     return F;
   }
 
-  Lex = S;
-  Token = Tok;
+  PopState();
+  EnableErrors();
   parse_node N = ParseInitDeclaratorList();
   N.Children.push_back(parse_node(Token));
   Match(token::SEMICOLON);
@@ -905,21 +937,20 @@ parse_node parser::ParseDeclaration() {
 }
 
 parse_node parser::ParseExternalDeclaration() {
-  lexer_state S(Lex);
-  token Tok(Token);
+  PushState();
+  DisableErrors();
   ParseSingleDeclaration();
   if (Token.Type == token::LEFT_PAREN) {
-    Lex = S;
-    Token = Tok;
+    RestoreState();
     ParseFunctionPrototype();
     if (Token.Type == token::LEFT_BRACE) {
-      Lex = S;
-      Token = Tok;
+      PopState();
+      EnableErrors();
       return ParseFunctionDefinition();
     }
   }
-  Lex = S;
-  Token = Tok;
+  PopState();
+  EnableErrors();
   return ParseDeclaration();
 }
 

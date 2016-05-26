@@ -160,6 +160,7 @@ struct token {
   friend std::string TokenToString(const int &Type) {
     symtable S;
     if (Type < END) return std::string(1, (char)Type);
+    if (Type == IDENTIFIER) return "identifier";
     if (Type == TYPE_NAME) return "type name";
     if (Type >= ATTRIBUTE && Type < FLOATCONSTANT) return S.FindFirstOfType(Type)->Name;
     if (Type == FLOATCONSTANT) return "float value";

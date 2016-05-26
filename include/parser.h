@@ -29,6 +29,12 @@ struct parse_node {
 struct parser {
   lexer_state &Lex;
   token Token;
+  struct parse_state {
+    lexer_state L;
+    token T;
+  };
+  std::vector<parse_state> ParseStateStack;
+  int ErrorDisableCount;
   symtable *SymbolTable;
   void (*ErrorFunc)(const std::string &, const std::string &, int, int);
 
@@ -36,6 +42,11 @@ struct parser {
 
   parser(lexer_state &L);
   void Match(int T);
+  void DisableErrors();
+  void EnableErrors();
+  void PushState();
+  void PopState();
+  void RestoreState();
 
   static bool IsAssignmentOp(int T);
   static bool IsTypeQualifier(int T);
