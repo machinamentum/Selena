@@ -1,5 +1,6 @@
 #include "ast.h"
 #include "codegen_neo.h"
+#include "codegen_shbin.h"
 #include "parser.h"
 #include "preprocessor.h"
 #include <cstring>
@@ -191,10 +192,12 @@ static void PrintHelp(const std::string &ExecName) {
   printf("     -o <output>       | Select output file\n");
   printf("     -h,--help         | Show this help message\n");
   printf("     --verbose         | Print parse and syntax tree structures\n");
+  printf("     -S                | Output nihstro assembler\n");
 }
 
 int main(int argc, char **argv) {
   bool PrintTrees = false;
+  bool OutputASM = false;
   char *InputFilePath = nullptr;
   char *OutputFilePath = nullptr;
   for (int i = 1; i < argc; ++i) {
@@ -205,6 +208,8 @@ int main(int argc, char **argv) {
       PrintTrees = true;
     } else if (strcmp(argv[i], "-o") == 0) {
       OutputFilePath = argv[++i];
+    } else if (strcmp(argv[i], "-S") == 0) {
+      OutputASM = true;
     } else {
       if (!InputFilePath) {
         InputFilePath = argv[i];
@@ -244,7 +249,10 @@ int main(int argc, char **argv) {
   if (OutputFilePath) {
     std::ofstream Fs;
     Fs.open(OutputFilePath);
-    CGNeoGenerateCode(&Program, Fs);
+    if (OutputASM)
+      CGNeoGenerateCode(&Program, Fs);
+    else
+      CGShbinGenerateCode(&Program, Fs);
   }
   return 0;
 }
