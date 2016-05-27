@@ -1,5 +1,6 @@
 #include "lexer.h"
 #include <cstdlib>
+#include <cstring>
 
 token lexer_state::GetToken() { return LexerGetToken(this); }
 

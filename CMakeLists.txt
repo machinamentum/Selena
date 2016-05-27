@@ -13,8 +13,7 @@ file(GLOB driver_SRC
     "driver/*.cpp"
 )
 
-add_library(selena ${scc_SRC})
-
-add_executable(selenacc ${driver_SRC})
-target_link_libraries(selenacc selena)
-target_include_directories (selena PUBLIC include)
+add_executable(selenacc ${driver_SRC} ${scc_SRC})
+target_include_directories (selenacc PUBLIC include)
+install(TARGETS selenacc DESTINATION $ENV{DEVKITARM}/bin)
+add_subdirectory(source)

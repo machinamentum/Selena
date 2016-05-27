@@ -3,15 +3,6 @@
 #include "lexer.h"
 #include <cstring>
 
-#include <sstream>
-namespace std {
-template <typename T> string to_string(T Value) {
-  stringstream ss;
-  ss << Value;
-  return ss.str();
-}
-};
-
 const neocode_variable ReturnReg = {"", "", 0, 15 + 0x10, 0, {0}, 0};
 
 static int GetInstructionFromIdentifier(std::string Name) {
