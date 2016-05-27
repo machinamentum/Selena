@@ -116,13 +116,19 @@ struct neocode_variable {
 };
 
 struct neocode_instruction {
-  enum { EMPTY, INLINE, MOV, MUL, RSQ, RCP, NOP, END, EX2, LG2, DP4 };
+  enum { EMPTY, MOV, MUL, RSQ, RCP, NOP, END, EX2, LG2, DP4 };
 
   int Type;
   neocode_variable Dst;
   neocode_variable Src1;
   neocode_variable Src2;
   std::string ExtraData;
+
+  neocode_instruction() {
+    Dst.Swizzle = 0;
+    Src1.Swizzle = 0;
+    Src2.Swizzle = 0;
+  }
 };
 
 struct neocode_program;

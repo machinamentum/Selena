@@ -12,7 +12,7 @@ template <typename T> string to_string(T Value) {
 }
 };
 
-const neocode_variable ReturnReg = {"", "", 0, 15 + 0x10, 0, {0}};
+const neocode_variable ReturnReg = {"", "", 0, 15 + 0x10, 0, {0}, 0};
 
 static int GetInstructionFromIdentifier(std::string Name) {
   if (Name.compare("mov") == 0) {
@@ -137,6 +137,7 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
   if ((ASTNode->Type == ast_node::VARIABLE) &&
       (ASTNode->Modifiers & ast_node::DECLARE)) {
     neocode_variable Var;
+    Var.Swizzle = 0;
     Var.Name = Function->Name + "_" + ASTNode->Id;
     Var.Type = ASTNode->VarType;
     Var.Register = Function->Program->Registers.AllocTemp();
@@ -252,7 +253,7 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
       }
       neocode_variable TempRet =
           (neocode_variable){"", "", ast_node::STRUCT,
-                             Function->Program->Registers.AllocTemp(), 0};
+                             Function->Program->Registers.AllocTemp(), 0, {0}, 0};
       neocode_function Callee = CGNeoBuildFunction(Function->Program, FuncDef);
       for (size_t i = 0; i < FuncDef->Children[0]->Children.size(); ++i) {
         neocode_variable &CP = Callee.Variables[i];
@@ -317,7 +318,7 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
     neocode_instruction In;
     In.Type = neocode_instruction::RCP;
     In.Dst = (neocode_variable){"", "", ast_node::STRUCT,
-                                Function->Program->Registers.AllocTemp(), 0};
+                                Function->Program->Registers.AllocTemp(), 0, {0}, 0};
     In.Src1 = CGNeoBuildInstruction(Function, ASTNode->Children[1]).Dst;
     Function->Instructions.push_back(In);
     if (ASTNode->Children[0]->VarType == ast_node::FLOAT_LITERAL &&
@@ -397,32 +398,32 @@ neocode_program CGNeoBuildProgramInstance(ast_node *ASTNode) {
                          ast_node::STRUCT,
                          Program.Registers.AllocOutput(),
                          neocode_variable::OUTPUT_POSITION,
-                         {0}});
+                         {0}, 0});
   Program.Globals.push_back((neocode_variable){"gl_FrontColor",
                                                "vec4",
                                                ast_node::STRUCT,
                                                Program.Registers.AllocOutput(),
                                                neocode_variable::OUTPUT_COLOR,
-                                               {0}});
+                                               {0}, 0});
   Program.Globals.push_back((neocode_variable){"gl_Vertex",
                                                "vec4",
                                                ast_node::STRUCT,
                                                Program.Registers.AllocVertex(),
                                                0,
-                                               {0}});
+                                               {0}, 0});
   Program.Globals.push_back((neocode_variable){"gl_Color",
                                                "vec4",
                                                ast_node::STRUCT,
                                                Program.Registers.AllocVertex(),
                                                0,
-                                               {0}});
+                                               {0}, 0});
   Program.Globals.push_back(
       (neocode_variable){"gl_ModelViewProjectionMatrix",
                          "mat4",
                          ast_node::STRUCT,
                          Program.Registers.AllocConstant(),
                          neocode_variable::INPUT_UNIFORM,
-                         {0}});
+                         {0}, 0});
   Program.Registers.AllocConstant();
   Program.Registers.AllocConstant();
   Program.Registers.AllocConstant();
@@ -439,9 +440,6 @@ void CGNeoGenerateInstruction(neocode_instruction *Instruction,
                               std::ostream &os) {
   switch (Instruction->Type) {
   case neocode_instruction::EMPTY:
-    break;
-  case neocode_instruction::INLINE:
-    os << " " << Instruction->ExtraData << std::endl;
     break;
 
   case neocode_instruction::MOV:
@@ -533,7 +531,7 @@ static void WriteVarible(neocode_variable &V, std::ostream &os) {
        << Const.Float.X << "," << Const.Float.Y << "," << Const.Float.Z << ","
        << Const.Float.W << ")" << std::endl;
   } else {
-    os << ".alias " << V.Name << " " << RegisterName(V, 1);
+    os << ".alias " << V.Name << " " << RegisterName(V.Register);
     if (V.TypeName.compare("mat4") == 0)
       os << " - " << RegisterName(V.Register + 3);
     os << std::endl;
