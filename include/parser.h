@@ -6,7 +6,7 @@
 
 struct parse_node {
 
-  enum { E, T };
+  enum NodeType : int { DECLARATION, FUNCTION_DEFINITION, E, T };
 
   std::vector<parse_node> Children;
   token Token;
@@ -18,6 +18,8 @@ struct parse_node {
     Token = Tok;
     Type = T;
   }
+
+  parse_node(NodeType NT) { Type = NT; }
 
   void Append(const parse_node &P) {
     Children.insert(Children.end(), P.Children.begin(), P.Children.end());

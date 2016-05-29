@@ -76,7 +76,7 @@ parse_node parser::ParseTypeQualifier() {
 parse_node parser::ParseFullySpecifiedType() {
   parse_node N;
   if (IsTypeQualifier(Token.Type)) {
-    N.Children.push_back(ParseTypeQualifier());
+    N.Append(ParseTypeQualifier());
   }
   N.Append(ParseTypeSpecifier());
   return N;
@@ -686,6 +686,7 @@ parse_node parser::ParseExpressionStatement() {
   if (Token.Type != token::SEMICOLON) {
     N.Append(ParseExpression());
   }
+  N.Children.push_back(parse_node(Token));
   Match(token::SEMICOLON);
   return N;
 }
@@ -857,14 +858,21 @@ parse_node parser::ParseCompoundStatementNoNewScope() {
 }
 
 parse_node parser::ParseFunctionDefinition() {
-  parse_node N;
+  parse_node N = parse_node(parse_node::FUNCTION_DEFINITION);
   N.Append(ParseFunctionPrototype());
   N.Append(ParseCompoundStatementNoNewScope());
   return N;
 }
 
 parse_node parser::ParseSingleDeclaration() {
-  parse_node N;
+  parse_node N = parse_node();
+  if (Token.Type == token::INVARIANT) {
+    N.Children.push_back(parse_node(Token));
+    Match(token::INVARIANT);
+    N.Children.push_back(parse_node(Token));
+    Match(token::IDENTIFIER);
+    return N;
+  }
   if (!(IsTypeSpecifier(Token.Type) || IsTypeQualifier(Token.Type) ||
         IsPrecisionQualifier(Token.Type))) {
     GenError("epected type specifier before token " + TokenToString(Token),
@@ -874,9 +882,23 @@ parse_node parser::ParseSingleDeclaration() {
     }
     return parse_node();
   }
-  N.Children.push_back(ParseFullySpecifiedType());
+  N.Append(ParseFullySpecifiedType());
+  if (Token.Type != token::IDENTIFIER) {
+    return N;
+  }
   N.Children.push_back(parse_node(Token));
   Match(token::IDENTIFIER);
+  if (Token.Type == token::LEFT_BRACKET) {
+    N.Children.push_back(parse_node(Token));
+    Match(token::LEFT_BRACKET);
+    N.Children.push_back(ParseConstantExpression());
+    N.Children.push_back(parse_node(Token));
+    Match(token::RIGHT_BRACKET);
+  } else if (Token.Type == token::EQUAL) {
+    N.Children.push_back(parse_node(Token));
+    Match(token::EQUAL);
+    N.Children.push_back(ParseInitializer());
+  }
   return N;
 }
 
@@ -912,6 +934,7 @@ parse_node parser::ParseDeclaration() {
     Match(token::PRECISION);
     N.Children.push_back(ParsePrecisionQualifier());
     N.Children.push_back(ParseTypeSpecifierNoPrecision());
+    N.Children.push_back(parse_node(Token));
     Match(token::SEMICOLON);
     return N;
   }
@@ -930,7 +953,8 @@ parse_node parser::ParseDeclaration() {
 
   PopState();
   EnableErrors();
-  parse_node N = ParseInitDeclaratorList();
+  parse_node N = parse_node(parse_node::DECLARATION);
+  N.Append(ParseInitDeclaratorList());
   N.Children.push_back(parse_node(Token));
   Match(token::SEMICOLON);
   return N;
