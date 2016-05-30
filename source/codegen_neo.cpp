@@ -458,6 +458,11 @@ neocode_program CGNeoBuildProgramInstance(ast_node *ASTNode, symtable *S) {
         Constant.Type = E->SymbolType;
         Constant.RegisterType = neocode_variable::INPUT_UNIFORM;
         Constant.Register = Program.Registers.AllocConstant();
+        if (E->TypeSpecifier == token::MAT4) {
+          Program.Registers.AllocConstant();
+          Program.Registers.AllocConstant();
+          Program.Registers.AllocConstant();
+        }
         Constant.Name = Node.Id;
         Constant.TypeName = S->FindFirstOfType(E->TypeSpecifier)->Name;
 
