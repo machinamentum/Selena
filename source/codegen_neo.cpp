@@ -416,20 +416,6 @@ neocode_program CGNeoBuildProgramInstance(ast_node *ASTNode, symtable *S) {
                                                neocode_variable::OUTPUT_COLOR,
                                                {0},
                                                0});
-  Program.Globals.push_back((neocode_variable){"gl_Vertex",
-                                               "vec4",
-                                               ast_node::STRUCT,
-                                               Program.Registers.AllocVertex(),
-                                               0,
-                                               {0},
-                                               0});
-  Program.Globals.push_back((neocode_variable){"gl_Color",
-                                               "vec4",
-                                               ast_node::STRUCT,
-                                               Program.Registers.AllocVertex(),
-                                               0,
-                                               {0},
-                                               0});
   Program.Registers.AllocConstant();
   Program.Registers.AllocConstant();
   Program.Registers.AllocConstant();
@@ -458,6 +444,21 @@ neocode_program CGNeoBuildProgramInstance(ast_node *ASTNode, symtable *S) {
         Constant.Type = E->SymbolType;
         Constant.RegisterType = neocode_variable::INPUT_UNIFORM;
         Constant.Register = Program.Registers.AllocConstant();
+        if (E->TypeSpecifier == token::MAT4) {
+          Program.Registers.AllocConstant();
+          Program.Registers.AllocConstant();
+          Program.Registers.AllocConstant();
+        }
+        Constant.Name = Node.Id;
+        Constant.TypeName = S->FindFirstOfType(E->TypeSpecifier)->Name;
+
+        Constant.Swizzle = 0;
+        Program.Globals.push_back(Constant);
+      } else if (E->Qualifier == token::ATTRIBUTE) {
+        neocode_variable Constant;
+        Constant.Type = E->SymbolType;
+        Constant.RegisterType = 0;
+        Constant.Register = Program.Registers.AllocVertex();
         if (E->TypeSpecifier == token::MAT4) {
           Program.Registers.AllocConstant();
           Program.Registers.AllocConstant();
@@ -554,7 +555,7 @@ static std::string OutputName(int Register) {
       "texcoord1", "texcoord2",  "unk",   "view",
   };
 
-  return ONames[Register];
+  return ONames[Register - 1];
 }
 
 static void WriteVarible(neocode_variable &V, std::ostream &os) {
