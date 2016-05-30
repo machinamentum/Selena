@@ -6,7 +6,22 @@
 
 struct parse_node {
 
-  enum NodeType : int { DECLARATION, FUNCTION_DEFINITION, E, T };
+  enum NodeType : int {
+    DECLARATION,
+    FUNCTION_DEFINITION,
+    FUNCTION_CALL,
+    TYPE_QUALIFIER,
+    TYPE_SPECIFIER,
+    PRECISION_QUALIFER,
+    ASSIGNMENT_EXPR,
+    CONDITIONAL_EXPR,
+    PRIMARY_EXPRESSION,
+    EXPRESSION,
+    LOGOR_EXPR,
+    MULTIPLY_EXPR,
+    E,
+    T
+  };
 
   std::vector<parse_node> Children;
   token Token;
@@ -14,9 +29,9 @@ struct parse_node {
 
   parse_node() { Type = E; }
 
-  parse_node(token &Tok) {
+  parse_node(token &Tok, NodeType NT = T) {
     Token = Tok;
-    Type = T;
+    Type = NT;
   }
 
   parse_node(NodeType NT) { Type = NT; }

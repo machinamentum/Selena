@@ -6,7 +6,7 @@ void parser::GenError(const std::string &S, const token &T) {
   std::string Line = LexerGetLine(&Lex, T.Line);
   if (ErrorFunc)
     if (ErrorDisableCount == 0)
-    ErrorFunc(S, Line, T.Line, T.Offset);
+      ErrorFunc(S, Line, T.Line, T.Offset);
 }
 
 parser::parser(lexer_state &L) : Lex(L) { SymbolTable = Lex.Table; }
@@ -21,13 +21,9 @@ void parser::Match(int T) {
   }
 }
 
-void parser::DisableErrors() {
-  ++ErrorDisableCount;
-}
+void parser::DisableErrors() { ++ErrorDisableCount; }
 
-void parser::EnableErrors() {
-  --ErrorDisableCount;
-}
+void parser::EnableErrors() { --ErrorDisableCount; }
 
 void parser::PushState() {
   ParseStateStack.push_back((parse_state){Lex, Token});
@@ -63,7 +59,7 @@ parse_node parser::ParseTypeQualifier() {
     N.Children.push_back(parse_node(Token));
     Match(token::VARYING);
   } else if (IsTypeQualifier(Token.Type)) {
-    N.Children.push_back(parse_node(Token));
+    N.Children.push_back(parse_node(Token, parse_node::TYPE_QUALIFIER));
     Match(Token.Type);
   } else {
     GenError("expected type qualifier before token " + TokenToString(Token),
@@ -319,7 +315,7 @@ parse_node parser::ParseAssignmentOperator() {
 }
 
 parse_node parser::ParseFunctionCall() {
-  parse_node N;
+  parse_node N = parse_node(parse_node::FUNCTION_CALL);
   if (!(Token.Type == token::IDENTIFIER ||
         IsConstructorIdentifier(Token.Type) || Token.Type == token::ASM)) {
     GenError("expected function identifier or type constructor before token " +
@@ -340,7 +336,7 @@ parse_node parser::ParseFunctionCall() {
       parse_node NSub;
       NSub.Children.push_back(ParseAssignmentExpression());
       while (Token.Type == token::COMMA) {
-        // NSub.Children.push_back(parse_node(Token));
+        NSub.Children.push_back(parse_node(Token));
         Match(token::COMMA);
         NSub.Children.push_back(ParseAssignmentExpression());
       }
@@ -349,6 +345,7 @@ parse_node parser::ParseFunctionCall() {
       Match(token::RIGHT_PAREN);
     }
   } else {
+    N.Children.push_back(parse_node());
     N.Children.push_back(parse_node(Token));
     Match(token::RIGHT_PAREN);
   }
@@ -448,10 +445,12 @@ parse_node parser::ParseLogicalOrExpression() {
 }
 
 parse_node parser::ParsePrimaryExpression() {
-  parse_node N;
+  parse_node N = parse_node(parse_node::PRIMARY_EXPRESSION);
   if (Token.Type == token::LEFT_PAREN) {
+    N.Children.push_back(parse_node(Token));
     Match(token::LEFT_PAREN);
     N.Children.push_back(ParseExpression());
+    N.Children.push_back(parse_node(Token));
     Match(token::RIGHT_PAREN);
     return N;
   }
@@ -461,7 +460,7 @@ parse_node parser::ParsePrimaryExpression() {
   case token::BOOLCONSTANT:
   case token::IDENTIFIER:
   case token::DQSTRING:
-    N = parse_node(Token);
+    N = parse_node(Token, parse_node::PRIMARY_EXPRESSION);
     Match(Token.Type);
     return N;
 
@@ -521,12 +520,11 @@ parse_node parser::ParseUnaryExpression() {
     N.Children.push_back(ParseUnaryExpression());
     return N;
   }
-  N.Children.push_back(ParsePostfixExpression());
-  return N;
+  return ParsePostfixExpression();
 }
 
 parse_node parser::ParseConditionalExpression() {
-  parse_node N;
+  parse_node N = parse_node(parse_node::CONDITIONAL_EXPR);
   parse_node L = ParseLogicalOrExpression();
   if (Token.Type != token::QUESTION) {
     return L;
@@ -540,20 +538,24 @@ parse_node parser::ParseConditionalExpression() {
 }
 
 parse_node parser::ParseAssignmentExpression() {
-  lexer_state S(Lex);
-  token Tok(Token);
+  PushState();
+  DisableErrors();
   parse_node U = ParseUnaryExpression();
   if (!IsAssignmentOp(Token.Type)) {
-    Lex = S;
-    Token = Tok;
+    PopState();
+    EnableErrors();
     parse_node Cond = ParseConditionalExpression();
-    if (!IsAssignmentOp(Token.Type))
+    if (!IsAssignmentOp(Token.Type)) {
       return Cond;
+    }
     U = Cond;
+  } else {
+    PopState();
+    EnableErrors();
+    U = ParseUnaryExpression();
   }
-  parse_node N;
+  parse_node N = parse_node(parse_node::ASSIGNMENT_EXPR);
   N.Children.push_back(U);
-
   N.Children.push_back(ParseAssignmentOperator());
   N.Children.push_back(ParseAssignmentExpression());
   return N;
@@ -561,7 +563,7 @@ parse_node parser::ParseAssignmentExpression() {
 
 parse_node parser::ParsePrecisionQualifier() {
   if (IsPrecisionQualifier(Token.Type)) {
-    parse_node N = parse_node(Token);
+    parse_node N = parse_node(Token, parse_node::PRECISION_QUALIFER);
     Match(Token.Type);
     return N;
   }
@@ -648,7 +650,7 @@ parse_node parser::ParseTypeSpecifierNoPrecision() {
   case token::SAMPLER2D:
   case token::SAMPLERCUBE:
   case token::TYPE_NAME: {
-    parse_node N = parse_node(Token);
+    parse_node N = parse_node(Token, parse_node::TYPE_SPECIFIER);
     Match(Token.Type);
     return N;
   }
@@ -670,13 +672,12 @@ parse_node parser::ParseConstantExpression() {
 }
 
 parse_node parser::ParseExpression() {
-  parse_node N;
-expr_reset:
-  N.Append(ParseAssignmentExpression());
+  parse_node N = parse_node::EXPRESSION;
+  N.Children.push_back(ParseAssignmentExpression());
   if (Token.Type == token::COMMA) {
     N.Children.push_back(parse_node(Token));
     Match(token::COMMA);
-    goto expr_reset;
+    N.Children.push_back(ParseExpression());
   }
   return N;
 }
@@ -684,7 +685,7 @@ expr_reset:
 parse_node parser::ParseExpressionStatement() {
   parse_node N;
   if (Token.Type != token::SEMICOLON) {
-    N.Append(ParseExpression());
+    N.Children.push_back(ParseExpression());
   }
   N.Children.push_back(parse_node(Token));
   Match(token::SEMICOLON);
@@ -877,7 +878,7 @@ parse_node parser::ParseSingleDeclaration() {
         IsPrecisionQualifier(Token.Type))) {
     GenError("epected type specifier before token " + TokenToString(Token),
              Token);
-    while (Token.Type !=token::SEMICOLON && Token.Type != token::END) {
+    while (Token.Type != token::SEMICOLON && Token.Type != token::END) {
       Match(Token.Type);
     }
     return parse_node();
@@ -895,9 +896,11 @@ parse_node parser::ParseSingleDeclaration() {
     N.Children.push_back(parse_node(Token));
     Match(token::RIGHT_BRACKET);
   } else if (Token.Type == token::EQUAL) {
-    N.Children.push_back(parse_node(Token));
+    parse_node NSub;
+    NSub.Children.push_back(parse_node(Token));
     Match(token::EQUAL);
-    N.Children.push_back(ParseInitializer());
+    NSub.Children.push_back(ParseInitializer());
+    N.Children.push_back(NSub);
   }
   return N;
 }

@@ -21,43 +21,40 @@ struct ast_node {
     VOID,
     INT_LITERAL,
     FLOAT_LITERAL,
+    BOOL_LITERAL,
     STRING_LITERAL,
     VARIABLE,
     RETURN,
     ASSIGNMENT
   };
 
-  enum { INLINE = 1, DECLARE = (1 << 1) };
-
-  int Type = 0;
-  int VarType = 0;
-  int Modifiers = 0;
   std::string Id;
-  std::vector<ast_node *> Children;
+  std::vector<ast_node> Children;
+  int Type;
   float FloatValue;
   long IntValue;
-  std::string Typename;
-  ast_node *Parent = nullptr;
 
-  ast_node(ast_node *ASTParent) : Parent(ASTParent) {}
+  enum { DECLARE = 1 << 0 };
+  int Modifiers;
 
-  void PushChild(ast_node *Child) {
-    Child->Parent = this;
-    Children.push_back(Child);
+  void Append(const ast_node &A) {
+    Children.insert(Children.end(), A.Children.begin(), A.Children.end());
   }
+};
 
-  ast_node *LookupType(std::string Typename);
-  ast_node *LookupFunction(std::string FuncName);
+class ast {
+  symtable *SymbolTable;
 
-  static ast_node *BuildFunction(ast_node *Parent, parse_node *Node);
-  static ast_node *BuildFromIdentifier(ast_node *Parent, parse_node *PNode);
-  static ast_node *BuildFromParseTree(ast_node *Parent, parse_node *Node);
-  static ast_node *BuildStatement(ast_node *Parent, parse_node *Node);
-  static ast_node *BuildReturn(ast_node *Parent, parse_node *Node);
-  static ast_node *BuildStruct(ast_node *Parent, parse_node *Node);
-  static ast_node *BuildFunctionCall(ast_node *Parent, parse_node *Node);
-  static ast_node *BuildVariable(ast_node *Parent, parse_node *Node);
-  static ast_node *BuildConstantPrimitive(ast_node *Parent, parse_node *Node);
+public:
+  ast(symtable *S);
+  ast_node BuildStatement(parse_node &P);
+  ast_node BuildStatementList(parse_node &P);
+  ast_node BuildFunctionCall(parse_node &P);
+  ast_node BuildPrimaryExpression(parse_node &P);
+  ast_node BuildAssignmentExpression(parse_node &P);
+  ast_node BuildFunctionDefinition(parse_node &P);
+  ast_node BuildDeclaration(parse_node &P);
+  static ast_node BuildTranslationUnit(parse_node &P, symtable *S);
 };
 
 #endif

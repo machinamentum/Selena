@@ -150,9 +150,15 @@ struct neocode_program {
   neocode_register_file Registers;
 };
 
-neocode_function CGNeoBuildFunction(neocode_program *Program,
-                                    ast_node *ASTNode);
-neocode_program CGNeoBuildProgramInstance(ast_node *ASTNode);
+struct cg_neo {
+  symtable *SymbolTable;
+  void BuildStatement(neocode_function *Function, ast_node *ASTNode);
+  neocode_instruction BuildInstruction(neocode_function *Function,
+                                       ast_node *ASTNode);
+  neocode_function BuildFunction(neocode_program *Program, ast_node *ASTNode);
+};
+
+neocode_program CGNeoBuildProgramInstance(ast_node *ASTNode, symtable *S);
 void CGNeoGenerateCode(neocode_program *Program, std::ostream &os);
 
 #endif

@@ -96,13 +96,13 @@ _CheckWhiteSpace:
     }
     std::string TheID = std::string(Current, End - Current);
     symtable_entry *Entry = State->Table->Lookup(TheID);
-    if (Entry->Type == 0)
+    if (Entry->SymbolType == 0)
       Entry = State->Table->Insert(TheID, token::IDENTIFIER);
     ReturnToken.Id = Entry->Name;
-    ReturnToken.Type = Entry->Type;
+    ReturnToken.Type = Entry->SymbolType;
     ReturnToken.Line = State->LineCurrent;
     ReturnToken.Offset = State->OffsetCurrent;
-    if (Entry->Type == token::BOOLCONSTANT) {
+    if (Entry->SymbolType == token::BOOLCONSTANT) {
       if (strcmp(Entry->Name.c_str(), "true") == 0)
         ReturnToken.BoolValue = 1;
       if (strcmp(Entry->Name.c_str(), "false") == 0)

@@ -65,10 +65,12 @@ static std::string GetSwizzleAsString(neocode_variable &V) {
   unsigned int Swizz = V.Swizzle;
   for (int i = 0; i < 4; ++i) {
     int Index = ((Swizz >> (i * 4)) & 0b1111) - 1;
-    if (Index < 0) continue;
+    if (Index < 0)
+      continue;
     S += std::string(1, "xyzw"[Index]);
   }
-  if (S.length()) return "." + S;
+  if (S.length())
+    return "." + S;
   return "";
 }
 
@@ -104,6 +106,18 @@ static std::string RegisterName(int Register) {
   return std::string("c") + std::to_string(Register - 0x20);
 }
 
+static bool IsVariableType(int T) {
+  switch (T) {
+  case ast_node::VARIABLE:
+  case ast_node::FLOAT_LITERAL:
+  case ast_node::INT_LITERAL:
+  case ast_node::BOOL_LITERAL:
+  case ast_node::STRING_LITERAL:
+    return true;
+  }
+  return false;
+}
+
 neocode_variable *neocode_function::GetVariable(std::string Name) {
 
   for (neocode_variable &V : Variables) {
@@ -122,15 +136,15 @@ neocode_variable *neocode_function::GetVariable(std::string Name) {
   return nullptr;
 }
 
-neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
-                                          ast_node *ASTNode) {
+neocode_instruction cg_neo::BuildInstruction(neocode_function *Function,
+                                             ast_node *ASTNode) {
 
-  if ((ASTNode->Type == ast_node::VARIABLE) &&
+  if (IsVariableType(ASTNode->Type) &&
       (ASTNode->Modifiers & ast_node::DECLARE)) {
     neocode_variable Var;
     Var.Swizzle = 0;
     Var.Name = Function->Name + "_" + ASTNode->Id;
-    Var.Type = ASTNode->VarType;
+    Var.Type = ASTNode->Type;
     Var.Register = Function->Program->Registers.AllocTemp();
     Var.RegisterType = 0;
     Function->Variables.push_back(Var);
@@ -141,7 +155,7 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
     return In;
   }
 
-  if (ASTNode->VarType == ast_node::FLOAT_LITERAL) {
+  if (ASTNode->Type == ast_node::FLOAT_LITERAL) {
     neocode_variable Constant;
     Constant.Type = ast_node::FLOAT_LITERAL;
     Constant.RegisterType = 0;
@@ -174,7 +188,7 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
       lexer_state LexerState;
       std::vector<neocode_variable> CachedVars;
       auto GetNextFromTokenSpecifier = [&LexerState, &Function, &ASTNode,
-                                        &CachedVars]() {
+                                        &CachedVars, this]() {
         token Token = LexerGetToken(&LexerState);
         if (Token.Type == ',')
           Token = LexerGetToken(&LexerState);
@@ -189,8 +203,7 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
           if (Token.IntValue > CachedVars.size()) {
             CachedVars.resize(Token.IntValue);
             CachedVars[Token.IntValue - 1] =
-                CGNeoBuildInstruction(Function,
-                                      ASTNode->Children[Token.IntValue])
+                BuildInstruction(Function, &ASTNode->Children[Token.IntValue])
                     .Dst;
           }
           return CachedVars[Token.IntValue - 1];
@@ -202,7 +215,7 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
         return *Function->GetVariable(Token.Id);
       };
 
-      char *Source = (char *)ASTNode->Children[0]->Id.c_str();
+      char *Source = (char *)ASTNode->Children[0].Id.c_str();
       symtable SymTable;
       LexerInit(&LexerState, Source, Source + strlen(Source) + 1, &SymTable);
       token Token = LexerGetToken(&LexerState);
@@ -213,20 +226,20 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
       In.Src2 = GetNextFromTokenSpecifier();
       Function->Instructions.push_back(In);
       return In;
-    } else if (ASTNode->LookupType(ASTNode->Id)) {
-      ast_node *Type = ASTNode->LookupType(ASTNode->Id);
+    } else if (parser::IsTypeSpecifier(SymbolTable->Lookup(ASTNode->Id)->SymbolType)) {
+      symtable_entry *Type = SymbolTable->Lookup(ASTNode->Id);
       // generate constant
       neocode_variable Constant;
-      Constant.Type = Type->Type;
+      Constant.Type = Type->SymbolType;
       Constant.RegisterType = 0;
       Constant.Register = Function->Program->Registers.AllocConstant();
       Constant.Name = std::string("Anonymous_") + ASTNode->Id + "_" +
                       RegisterName(Constant.Register);
       Constant.Swizzle = 0;
-      Constant.Const.Float.X = ASTNode->Children[0]->FloatValue;
-      Constant.Const.Float.Y = ASTNode->Children[1]->FloatValue;
-      Constant.Const.Float.Z = ASTNode->Children[2]->FloatValue;
-      Constant.Const.Float.W = ASTNode->Children[3]->FloatValue;
+      Constant.Const.Float.X = ASTNode->Children[0].FloatValue;
+      Constant.Const.Float.Y = ASTNode->Children[1].FloatValue;
+      Constant.Const.Float.Z = ASTNode->Children[2].FloatValue;
+      Constant.Const.Float.W = ASTNode->Children[3].FloatValue;
       Function->Program->Globals.push_back(Constant);
       neocode_instruction In;
       In.Type = neocode_instruction::EMPTY;
@@ -234,42 +247,46 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
       Function->Instructions.push_back(In);
       return In;
     } else {
-      ast_node *FuncDef = ASTNode->LookupFunction(ASTNode->Id);
-      if (!FuncDef)
+      symtable_entry *FuncDef = SymbolTable->Lookup(ASTNode->Id);
+      if (FuncDef->SymbolType == 0)
         return neocode_instruction();
       std::vector<neocode_variable> Params;
       for (size_t i = 0; i < ASTNode->Children.size(); ++i) {
-        Params.push_back(
-            CGNeoBuildInstruction(Function, ASTNode->Children[i]).Dst);
+        Params.push_back(BuildInstruction(Function, &ASTNode->Children[i]).Dst);
       }
       neocode_variable TempRet =
-          (neocode_variable){"", "", ast_node::STRUCT,
-                             Function->Program->Registers.AllocTemp(), 0, {0}, 0};
-      neocode_function Callee = CGNeoBuildFunction(Function->Program, FuncDef);
-      for (size_t i = 0; i < FuncDef->Children[0]->Children.size(); ++i) {
-        neocode_variable &CP = Callee.Variables[i];
-        for (neocode_instruction &In : Callee.Instructions) {
-          if (In.Dst.Name.compare(CP.Name) == 0) {
-            In.Dst = neocode_variable(Params[i]);
-          } else if (In.Src1.Name.compare(CP.Name) == 0) {
-            In.Src1 = neocode_variable(Params[i]);
-          } else if (In.Src2.Name.compare(CP.Name) == 0) {
-            In.Src2 = neocode_variable(Params[i]);
-          }
-
-          if (In.Dst.Register == ReturnReg.Register) {
-            In.Dst = TempRet;
-          } else if (In.Src1.Register == ReturnReg.Register) {
-            In.Src1 = TempRet;
-          } else if (In.Src2.Register == ReturnReg.Register) {
-            In.Src2 = TempRet;
-          }
-        }
-      }
-
-      for (neocode_instruction &In : Callee.Instructions) {
-        Function->Instructions.push_back(In);
-      }
+          (neocode_variable){"",
+                             "",
+                             ast_node::STRUCT,
+                             Function->Program->Registers.AllocTemp(),
+                             0,
+                             {0},
+                             0};
+      // neocode_function Callee = BuildFunction(Function->Program, FuncDef);
+      // for (size_t i = 0; i < FuncDef->Children[0].Children.size(); ++i) {
+      //   neocode_variable &CP = Callee.Variables[i];
+      //   for (neocode_instruction &In : Callee.Instructions) {
+      //     if (In.Dst.Name.compare(CP.Name) == 0) {
+      //       In.Dst = neocode_variable(Params[i]);
+      //     } else if (In.Src1.Name.compare(CP.Name) == 0) {
+      //       In.Src1 = neocode_variable(Params[i]);
+      //     } else if (In.Src2.Name.compare(CP.Name) == 0) {
+      //       In.Src2 = neocode_variable(Params[i]);
+      //     }
+      //
+      //     if (In.Dst.Register == ReturnReg.Register) {
+      //       In.Dst = TempRet;
+      //     } else if (In.Src1.Register == ReturnReg.Register) {
+      //       In.Src1 = TempRet;
+      //     } else if (In.Src2.Register == ReturnReg.Register) {
+      //       In.Src2 = TempRet;
+      //     }
+      //   }
+      // }
+      //
+      // for (neocode_instruction &In : Callee.Instructions) {
+      //   Function->Instructions.push_back(In);
+      // }
 
       return Function->Instructions.back();
     }
@@ -279,8 +296,8 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
     neocode_instruction In;
     In.Dst = (neocode_variable){"", "", ast_node::STRUCT,
                                 Function->Program->Registers.AllocTemp(), 0};
-    In.Src1 = CGNeoBuildInstruction(Function, ASTNode->Children[0]).Dst;
-    In.Src2 = CGNeoBuildInstruction(Function, ASTNode->Children[1]).Dst;
+    In.Src1 = BuildInstruction(Function, &ASTNode->Children[0]).Dst;
+    In.Src2 = BuildInstruction(Function, &ASTNode->Children[1]).Dst;
     if (In.Src1.TypeName.compare("mat4") == 0) {
       In.Type = neocode_instruction::DP4;
 
@@ -308,15 +325,16 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
   if (ASTNode->Type == ast_node::DIVIDE) {
     neocode_instruction In;
     In.Type = neocode_instruction::RCP;
-    In.Dst = (neocode_variable){"", "", ast_node::STRUCT,
-                                Function->Program->Registers.AllocTemp(), 0, {0}, 0};
-    In.Src1 = CGNeoBuildInstruction(Function, ASTNode->Children[1]).Dst;
+    In.Dst = (neocode_variable){
+        "",  "", ast_node::STRUCT, Function->Program->Registers.AllocTemp(), 0,
+        {0}, 0};
+    In.Src1 = BuildInstruction(Function, &ASTNode->Children[1]).Dst;
     Function->Instructions.push_back(In);
-    if (ASTNode->Children[0]->VarType == ast_node::FLOAT_LITERAL &&
-        ASTNode->Children[0]->FloatValue != 1.0) {
+    if (ASTNode->Children[0].Type == ast_node::FLOAT_LITERAL &&
+        ASTNode->Children[0].FloatValue != 1.0) {
       In.Type = neocode_instruction::MUL;
       In.Src1 = In.Dst;
-      In.Src2 = CGNeoBuildInstruction(Function, ASTNode->Children[0]).Dst;
+      In.Src2 = BuildInstruction(Function, &ASTNode->Children[0]).Dst;
       Function->Instructions.push_back(In);
     }
     return In;
@@ -325,8 +343,8 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
   if (ASTNode->Type == ast_node::ASSIGNMENT) {
     neocode_instruction In;
     In.Type = neocode_instruction::MOV;
-    In.Dst = CGNeoBuildInstruction(Function, ASTNode->Children[0]).Dst;
-    In.Src1 = CGNeoBuildInstruction(Function, ASTNode->Children[1]).Dst;
+    In.Dst = BuildInstruction(Function, &ASTNode->Children[0]).Dst;
+    In.Src1 = BuildInstruction(Function, &ASTNode->Children[1]).Dst;
     // if (Function->Instructions.back().Type != neocode_instruction::EMPTY &&
     //     Function->Instructions.back().Type != neocode_instruction::MOV) {
     //   Function->Instructions.back().Dst = In.Dst;
@@ -340,8 +358,7 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
     neocode_instruction In;
     In.Type = neocode_instruction::MOV;
     In.Dst = ReturnReg;
-    In.Src1 =
-        CGNeoBuildInstruction(Function, ASTNode->Children[0]->Children[0]).Dst;
+    In.Src1 = BuildInstruction(Function, &ASTNode->Children[0].Children[0]).Dst;
     if (Function->Instructions.back().Type != neocode_instruction::EMPTY) {
       Function->Instructions.back().Dst = ReturnReg;
     } else {
@@ -353,8 +370,8 @@ neocode_instruction CGNeoBuildInstruction(neocode_function *Function,
   return neocode_instruction();
 }
 
-void CGNeoBuildStatement(neocode_function *Function, ast_node *ASTNode) {
-  CGNeoBuildInstruction(Function, ASTNode);
+void cg_neo::BuildStatement(neocode_function *Function, ast_node *ASTNode) {
+  BuildInstruction(Function, ASTNode);
   for (neocode_instruction &In : Function->Instructions) {
     if (In.Dst.Name.compare("") == 0) {
       Function->Program->Registers.Free(In.Dst.Register);
@@ -368,20 +385,21 @@ void CGNeoBuildStatement(neocode_function *Function, ast_node *ASTNode) {
   }
 }
 
-neocode_function CGNeoBuildFunction(neocode_program *Program,
-                                    ast_node *ASTNode) {
+neocode_function cg_neo::BuildFunction(neocode_program *Program, ast_node *ASTNode) {
   neocode_function Function = neocode_function(Program);
   Function.Name = ASTNode->Id;
-  for (size_t i = 0; i < ASTNode->Children.size(); ++i) {
-    if (ASTNode->Children[i]->Children.size()) {
-      CGNeoBuildStatement(&Function, ASTNode->Children[i]->Children[0]);
+  for (size_t i = 0; i < ASTNode->Children[0].Children.size(); ++i) {
+    if (ASTNode->Children[0].Children[i].Children.size()) {
+      BuildStatement(&Function, &ASTNode->Children[0].Children[i]);
     }
   }
   return Function;
 }
 
-neocode_program CGNeoBuildProgramInstance(ast_node *ASTNode) {
+neocode_program CGNeoBuildProgramInstance(ast_node *ASTNode, symtable *S) {
   neocode_program Program;
+  cg_neo CGNeo;
+  CGNeo.SymbolTable = S;
   Program.Registers = {};
   Program.Globals.push_back(
       (neocode_variable){"gl_Position",
@@ -389,46 +407,70 @@ neocode_program CGNeoBuildProgramInstance(ast_node *ASTNode) {
                          ast_node::STRUCT,
                          Program.Registers.AllocOutput(),
                          neocode_variable::OUTPUT_POSITION,
-                         {0}, 0});
+                         {0},
+                         0});
   Program.Globals.push_back((neocode_variable){"gl_FrontColor",
                                                "vec4",
                                                ast_node::STRUCT,
                                                Program.Registers.AllocOutput(),
                                                neocode_variable::OUTPUT_COLOR,
-                                               {0}, 0});
+                                               {0},
+                                               0});
   Program.Globals.push_back((neocode_variable){"gl_Vertex",
                                                "vec4",
                                                ast_node::STRUCT,
                                                Program.Registers.AllocVertex(),
                                                0,
-                                               {0}, 0});
+                                               {0},
+                                               0});
   Program.Globals.push_back((neocode_variable){"gl_Color",
                                                "vec4",
                                                ast_node::STRUCT,
                                                Program.Registers.AllocVertex(),
                                                0,
-                                               {0}, 0});
-  Program.Globals.push_back(
-      (neocode_variable){"gl_ModelViewProjectionMatrix",
-                         "mat4",
-                         ast_node::STRUCT,
-                         Program.Registers.AllocConstant(),
-                         neocode_variable::INPUT_UNIFORM,
-                         {0}, 0});
+                                               {0},
+                                               0});
   Program.Registers.AllocConstant();
   Program.Registers.AllocConstant();
   Program.Registers.AllocConstant();
   for (auto Node : ASTNode->Children) {
-    if (Node->Type == ast_node::FUNCTION) {
-      Program.Functions.push_back(CGNeoBuildFunction(&Program, Node));
+    if (Node.Type == ast_node::FUNCTION) {
+      Program.Functions.push_back(CGNeo.BuildFunction(&Program, &Node));
       Program.Registers.FreeAllTemp();
+    } else if (Node.Type == ast_node::VARIABLE) {
+      symtable_entry *E = S->Lookup(Node.Id);
+      if (E->Qualifier == token::CONST && E->TypeSpecifier == token::VEC4) {
+        neocode_variable Constant;
+        Constant.Type = E->SymbolType;
+        Constant.RegisterType = 0;
+        Constant.Register = Program.Registers.AllocConstant();
+        Constant.Name = Node.Id;
+        Constant.Swizzle = 0;
+        // TODO traverse AST to resolve const expr
+        ast_node &AN = Node.Children[0].Children[0];
+        Constant.Const.Float.X = AN.Children[0].FloatValue;
+        Constant.Const.Float.Y = AN.Children[1].FloatValue;
+        Constant.Const.Float.Z = AN.Children[2].FloatValue;
+        Constant.Const.Float.W = AN.Children[3].FloatValue;
+        Program.Globals.push_back(Constant);
+      } else if (E->Qualifier == token::UNIFORM) {
+        neocode_variable Constant;
+        Constant.Type = E->SymbolType;
+        Constant.RegisterType = neocode_variable::INPUT_UNIFORM;
+        Constant.Register = Program.Registers.AllocConstant();
+        Constant.Name = Node.Id;
+        Constant.TypeName = S->FindFirstOfType(E->TypeSpecifier)->Name;
+
+        Constant.Swizzle = 0;
+        Program.Globals.push_back(Constant);
+      }
     }
   }
   return Program;
 }
 
 void CGNeoGenerateInstruction(neocode_instruction *Instruction,
-                              std::ostream &os) {
+                                 std::ostream &os) {
   switch (Instruction->Type) {
   case neocode_instruction::EMPTY:
     break;

@@ -28,8 +28,8 @@ char *SelenaCompileShaderSource(const char *Src, int *BinSize) {
   Parser.ErrorFunc = ErrorCallback;
   parse_node RootNode = Parser.ParseTranslationUnit();
 
-  ast_node *ASTRoot = ast_node::BuildFromParseTree(nullptr, &RootNode);
-  neocode_program Program = CGNeoBuildProgramInstance(ASTRoot);
+  ast_node ASTRoot = ast::BuildTranslationUnit(RootNode, &SymbolTable);
+  neocode_program Program = CGNeoBuildProgramInstance(&ASTRoot, &SymbolTable);
   std::stringstream ss;
   CGShbinGenerateCode(&Program, ss);
   char *Shbin = (char *)malloc(ss.str().length() + 1);

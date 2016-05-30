@@ -25,12 +25,21 @@ symtable_entry *symtable::Lookup(std::string Name) {
 
 symtable_entry *symtable::FindFirstOfType(int T) {
   for (int i = 0; i < symbols.size(); ++i) {
-    if (symbols[i].Type == T) {
+    if (symbols[i].SymbolType == T) {
       return &symbols[i];
     }
   }
 
   return &symbols[0];
+}
+
+void symtable::OpenScope() {
+  StackedTables.push_back(*this);
+}
+
+void symtable::CloseScope() {
+  *this = StackedTables.back();
+  StackedTables.pop_back();
 }
 
 symtable::symtable() {

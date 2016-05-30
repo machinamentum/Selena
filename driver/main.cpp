@@ -79,8 +79,52 @@ void PrintParseTree(parse_node *Node, int Depth) {
   for (int i = 0; i < Depth; ++i) {
     printf("   ");
   }
-  if (Node->Type == parse_node::E) {
-    printf("E%d\n", Depth);
+  if (Node->Type != parse_node::T) {
+    switch (Node->Type) {
+    case parse_node::DECLARATION:
+      printf("DEC%d\n", Depth);
+      break;
+    case parse_node::FUNCTION_DEFINITION:
+      printf("FUNC_DEF%d\n", Depth);
+      break;
+    case parse_node::FUNCTION_CALL:
+      printf("FUNC_CALL%d\n", Depth);
+      break;
+    case parse_node::TYPE_QUALIFIER:
+      printf("TYPE_QUAL%d:", Depth);
+      PrintToken(&Node->Token);
+      break;
+    case parse_node::TYPE_SPECIFIER:
+      printf("TYPE_SPEC%d:", Depth);
+      PrintToken(&Node->Token);
+      break;
+    case parse_node::PRECISION_QUALIFER:
+      printf("PREC_QUAL%d:", Depth);
+      PrintToken(&Node->Token);
+      break;
+    case parse_node::ASSIGNMENT_EXPR:
+      printf("ASSIGN_EXPR%d:", Depth);
+      PrintToken(&Node->Token);
+      break;
+    case parse_node::EXPRESSION:
+      printf("EXPR%d\n", Depth);
+      break;
+    case parse_node::CONDITIONAL_EXPR:
+      printf("COND_EXPR%d:", Depth);
+      PrintToken(&Node->Token);
+      break;
+    case parse_node::PRIMARY_EXPRESSION:
+      printf("PRIME_EXPR%d:", Depth);
+      PrintToken(&Node->Token);
+      break;
+    case parse_node::MULTIPLY_EXPR:
+      printf("MULT_EXPR%d\n", Depth);
+      break;
+    case parse_node::E:
+      printf("E%d\n", Depth);
+      break;
+    }
+
     for (size_t i = 0; i < Node->Children.size(); ++i) {
       PrintParseTree(&Node->Children[i], Depth + 1);
     }
@@ -90,100 +134,91 @@ void PrintParseTree(parse_node *Node, int Depth) {
   }
 }
 
-void PrintAST(ast_node *AST, int Depth);
+void PrintAST(ast_node &AST, int Depth);
 
 void PrintASTNode(ast_node &Child, int Depth) {
   switch (Child.Type) {
   case ast_node::FUNCTION:
     printf("function:%s:%lu\n", Child.Id.c_str(), Child.Children.size());
-    PrintAST(&Child, Depth + 1);
+    PrintAST(Child, Depth + 1);
     break;
   case ast_node::FUNCTION_CALL:
     printf("call:%s:%lu\n", Child.Id.c_str(), Child.Children.size());
-    PrintAST(&Child, Depth + 1);
+    PrintAST(Child, Depth + 1);
     break;
 
   case ast_node::STRUCT:
     printf("struct:%s:%lu\n", Child.Id.c_str(), Child.Children.size());
-    PrintAST(&Child, Depth + 1);
+    PrintAST(Child, Depth + 1);
     break;
 
   case ast_node::RETURN:
     printf("return\n");
-    PrintAST(&Child, Depth + 1);
+    PrintAST(Child, Depth + 1);
     break;
 
   case ast_node::ASSIGNMENT:
-    printf("%s =\n", Child.Id.c_str());
-    PrintAST(&Child, Depth + 1);
+    printf("Assign =\n");
+    PrintAST(Child, Depth + 1);
     break;
 
   case ast_node::MULTIPLY:
     printf("Mul *\n");
-    PrintAST(&Child, Depth + 1);
+    PrintAST(Child, Depth + 1);
     break;
 
   case ast_node::DIVIDE:
     printf("Div /\n");
-    PrintAST(&Child, Depth + 1);
+    PrintAST(Child, Depth + 1);
     break;
-
   case ast_node::VARIABLE:
-    switch (Child.VarType) {
-    case ast_node::FLOAT:
-      printf("float:%s:%s\n", Child.Id.c_str(),
-             (Child.Modifiers & ast_node::DECLARE) ? "true" : "false");
-      break;
-
-    case ast_node::INT:
-      printf("int:%s\n", Child.Id.c_str());
-      break;
-
-    case ast_node::FLOAT_LITERAL:
-      printf("float:%f\n", Child.FloatValue);
-      break;
-
-    case ast_node::INT_LITERAL:
-      printf("int:%ld\n", Child.IntValue);
-      break;
-
-    case ast_node::STRING_LITERAL:
-      printf("string:%s\n", Child.Id.c_str());
-      break;
-
-    case ast_node::STRUCT:
-      printf("struct:%s:%s\n", Child.Typename.c_str(), Child.Id.c_str());
-      break;
-
-    default:
-      printf("var:%d:%s\n", Child.VarType, Child.Id.c_str());
-      break;
-    }
+    printf("var %s\n", Child.Id.c_str());
+    PrintAST(Child, Depth + 1);
     break;
-
+  case ast_node::FLOAT_LITERAL:
+    printf("float:%f\n", Child.FloatValue);
+    PrintAST(Child, Depth + 1);
+    break;
+  case ast_node::INT_LITERAL:
+    printf("int:%ld\n", Child.IntValue);
+    PrintAST(Child, Depth + 1);
+    break;
+  case ast_node::BOOL_LITERAL:
+    printf("bool:%s\n", Child.IntValue ? "true" : "false");
+    PrintAST(Child, Depth + 1);
+    break;
+  case ast_node::STRING_LITERAL:
+    printf("string:%s\n", Child.Id.c_str());
+    PrintAST(Child, Depth + 1);
+    break;
+  case ast_node::NONE:
+    printf("EMPTY\n");
+    PrintAST(Child, Depth + 1);
+    break;
   default:
-    printf("Node Type %d, %s\n", Child.Type, Child.Id.c_str());
-    PrintAST(&Child, Depth + 1);
+    printf("unk:%d\n",Child.Type);
     break;
   }
 }
 
-void PrintAST(ast_node *AST, int Depth) {
-  for (auto Child : AST->Children) {
+void PrintAST(ast_node &AST, int Depth) {
+  for (auto Child : AST.Children) {
     for (int i = 0; i < Depth; ++i) {
       printf("  ");
     }
     printf("D%d ", Depth);
-    PrintASTNode(*Child, Depth);
+    PrintASTNode(Child, Depth);
   }
 }
 
+static int ErrorCount = 0;
 static void ErrorCallback(const std::string &ErrMsg,
                           const std::string &OffendingLine, int LineNumber,
                           int LineOffset) {
   printf("\033[1m\e[31merror\e[0m\033[1m:%d:%d: %s\n\033[0m%s\n", LineNumber,
          LineOffset, ErrMsg.c_str(), OffendingLine.c_str());
   printf("%*c^\n", LineOffset, ' ');
+  ++ErrorCount;
 }
 
 static void PrintHelp(const std::string &ExecName) {
@@ -235,17 +270,12 @@ int main(int argc, char **argv) {
   if (PrintTrees)
     PrintParseTree(&RootNode, 0);
 
-  // cpp_table CppTable;
-  // CppDefineInt(&CppTable, "__FILE__", 1);
-  // CppDefineInt(&CppTable, "GL_ES", 1);
-  // CppDefineInt(&CppTable, "__VERSION__", 100);
-  // CppResolveMacros(&CppTable, &RootNode);
-  // if (PrintTrees)
-  //   PrintParseTree(&RootNode, 0);
-  ast_node *ASTRoot = ast_node::BuildFromParseTree(nullptr, &RootNode);
+  ast_node ASTRoot = ast::BuildTranslationUnit(RootNode, &SymbolTable);
+  if (ErrorCount)
+    return -1;
   if (PrintTrees)
     PrintAST(ASTRoot, 0);
-  neocode_program Program = CGNeoBuildProgramInstance(ASTRoot);
+  neocode_program Program = CGNeoBuildProgramInstance(&ASTRoot, &SymbolTable);
   if (OutputFilePath) {
     std::ofstream Fs;
     Fs.open(OutputFilePath);
