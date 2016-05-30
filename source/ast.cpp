@@ -58,6 +58,8 @@ ast_node ast::BuildAssignmentExpression(parse_node &P) {
       A.Children.push_back(BuildFunctionCall(P.Children[1]));
     } else
       A.Children.push_back(BuildPrimaryExpression(P.Children[1]));
+  } else if (P.Type == parse_node::FUNCTION_CALL) {
+    return BuildFunctionCall(P);
   }
   return A;
 }
